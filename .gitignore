@@ -4,3 +4,4 @@
 build
 cmake-build-debug
 bin
+third_party/_deps

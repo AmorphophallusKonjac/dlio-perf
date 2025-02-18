@@ -1,2 +1,14 @@
-name: admin
-age: 26
+workflow:
+  gen_sample: true
+train:
+  epochs: 10
+dataset:
+  sample_sub_dir:
+    - 1
+    - 2
+    - 3
+    - 4
+  sample_size:
+    10
+generate:
+  transfer_size_stdev: 0.5

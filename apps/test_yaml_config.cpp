@@ -4,11 +4,10 @@
 #include <yaml-cpp/yaml.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
-
-#include <glog/logging.h>
+#include <g3log/g3log.hpp>
 
 int main(int argc, char** argv) {
-    google::InitGoogleLogging(argv[0]);
+    LOG(INFO) << "Hi log " << 123;
     std::cout << "hello world" << std::endl;
     YAML::Node config = YAML::LoadFile("../config/test.yaml");
     // const std::string name = config["name"].as<std::string>();
