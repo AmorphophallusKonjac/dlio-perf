@@ -14,10 +14,16 @@ endif()
 
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
+option(BUILD_TESTS "build test case" ON)
+
 find_package(Threads REQUIRED)
 
 add_subdirectory(third_party)
 
 add_subdirectory(src)
+
+if(BUILD_TESTS)
+    add_subdirectory(tests)
+endif()
 
 add_subdirectory(apps)

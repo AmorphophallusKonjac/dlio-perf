@@ -20,5 +20,7 @@ int main(){
 
     server.run();//启动服务端
 
+    std::cout << "server here" << std::endl;
+
     return EXIT_SUCCESS;
 }
