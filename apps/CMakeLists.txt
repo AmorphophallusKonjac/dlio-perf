@@ -16,3 +16,5 @@ add_executable(client client.cpp)
 target_include_directories(client PUBLIC ${rest_rpc_SOURCE_DIR}/include)
 
 add_subdirectory(master)
+
+add_subdirectory(slave)

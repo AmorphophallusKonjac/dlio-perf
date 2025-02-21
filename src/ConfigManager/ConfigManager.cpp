@@ -10,6 +10,12 @@ void ConfigManager::fromYaml(const std::string& file) {
         LOGF(INFO, "Loading yaml file %s", file.c_str());
         YAML::Node config = YAML::LoadFile(file);
 
+        if (config["env"]) {
+            if (const auto node = config["env"]["filesystem"]) {
+                env.filesystem = node.as<std::string>();
+            }
+        }
+
         if (config["workflow"]) {
             if (const auto node = config["workflow"]["gen_data"]) {
                 workflow.gen_data = node.as<bool>();
@@ -120,26 +126,30 @@ void ConfigManager::fromYaml(const std::string& file) {
             if (const auto node = config["checkpoint"]["write_threads"]) {
                 checkpoint.write_threads = node.as<int>();
             }
-            if (const auto node = config["checkpoint"]["checkpoint_write_type"]) {
+            if (const auto node = config["checkpoint"][
+                "checkpoint_write_type"]) {
                 if (node.as<std::string>() == "sync") {
                     checkpoint.checkpoint_write_type = CheckpointConfig::SYNC;
                 } else if (node.as<std::string>() == "asyn") {
                     checkpoint.checkpoint_write_type = CheckpointConfig::ASYN;
                 } else {
-                    LOGF(WARNING, "Unknown checkpoint write type. Use sync type");
+                    LOGF(WARNING,
+                         "Unknown checkpoint write type. Use sync type");
                     checkpoint.checkpoint_write_type = CheckpointConfig::SYNC;
                 }
             }
             if (const auto node = config["checkpoint"]["read_transfer_size"]) {
                 checkpoint.read_transfer_size = node.as<int>();
             }
-            if (const auto node = config["checkpoint"]["read_transfer_size_stdev"]) {
+            if (const auto node = config["checkpoint"][
+                "read_transfer_size_stdev"]) {
                 checkpoint.read_transfer_size_stdev = node.as<double>();
             }
             if (const auto node = config["checkpoint"]["write_transfer_size"]) {
                 checkpoint.write_transfer_size = node.as<int>();
             }
-            if (const auto node = config["checkpoint"]["write_transfer_size_stdev"]) {
+            if (const auto node = config["checkpoint"][
+                "write_transfer_size_stdev"]) {
                 checkpoint.write_transfer_size_stdev = node.as<double>();
             }
         }
@@ -149,9 +159,9 @@ void ConfigManager::fromYaml(const std::string& file) {
                 output.folder = node.as<std::string>();
             }
         }
-    } catch(const std::exception& e) {
+    } catch (const std::exception& e) {
         LOGF(FATAL, e.what());
-        LOGF(WARNING, "Can't load yaml file %s. Use default config instead", file.c_str());
+        LOGF(WARNING, "Can't load yaml file %s. Use default config instead",
+             file.c_str());
     }
-
 }
