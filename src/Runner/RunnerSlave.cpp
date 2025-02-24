@@ -18,6 +18,7 @@ RunnerSlave::RunnerSlave(const std::string& host, unsigned short port,
     slave_num_(slave_num),
     rpc_client_(std::make_unique<rest_rpc::rpc_client>(host, port)),
     name_(std::move(name)) {
+    rpc_client_->enable_auto_reconnect();
 }
 
 void RunnerSlave::start() {
