@@ -1,0 +1,46 @@
+#!/bin/bash
+
+function printUsage {
+    echo "Usage: dlio-perf <ConfigDir> <BinDir> <masterHost> <masterPort> <TestCase>"
+}
+
+if [ $# -ne 5 ]; then
+    printUsage
+    exit 1
+fi
+
+workDir=$(pwd -P)
+scriptsDir=$(cd "$(dirname "$0")" && pwd -P)
+confDir=$(cd "$workDir" && cd "$1" && pwd -P)
+binDir=$(cd "$workDir" && cd "$2" && pwd -P)
+testCase="$5.yaml"
+
+cd "$workDir"
+
+nodeList="$confDir/slaves"
+slaves=`sort "$nodeList"|sed  "s/#.*$//;/^$/d"`
+uniqSlaves=`sort "$nodeList" | uniq | sed  "s/#.*$//;/^$/d"`
+totalSalveNum=$(echo $slaves | wc -l)
+echo -e "Copy config to slave node"
+for slave in $uniqSlaves; do
+    scp $confDir/$testCase $slave:$confDir/$testCase >/dev/null
+done
+wait
+
+masterHost="$3"
+masterPort="$4"
+
+(nohup $binDir/master --config "$confDir/$testCase" --master_port $masterPort --slave_num $totalSalveNum >/dev/null 2>&1) &
+
+echo -e "Start master"
+
+slaveID=0
+for slave in $uniqSlaves; do
+    slaveNum=$(echo $slaves | grep -o "$slave" | wc -l)
+    echo -e "Connect to $slave..."
+    ssh -o ConnectTimeout=5 -o StrictHostKeyChecking=no -t $slave $scriptsDir/start-slave.sh "$workDir" "$binDir" "$confDir/$testCase" "$masterHost" "$masterPort" "$slaveID" "$slave" "$slaveNum" "$totalSalveNum" 2>&1
+    slaveID=`expr $slaveID + $slaveNum`
+done
+
+
+
