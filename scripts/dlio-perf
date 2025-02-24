@@ -30,9 +30,6 @@ wait
 masterHost="$3"
 masterPort="$4"
 
-(nohup $binDir/master --config "$confDir/$testCase" --master_port $masterPort --slave_num $totalSalveNum >/dev/null 2>&1) &
-
-echo -e "Start master"
 
 slaveID=0
 for slave in $uniqSlaves; do
@@ -42,5 +39,4 @@ for slave in $uniqSlaves; do
     slaveID=`expr $slaveID + $slaveNum`
 done
 
-
-
+$binDir/master --config "$confDir/$testCase" --master_port $masterPort --slave_num $totalSalveNum
