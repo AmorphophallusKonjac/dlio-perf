@@ -11,7 +11,7 @@ public:
         app.add_option("--master_port", master_port_)->check(
             CLI::Range(1, 65535))->required();
         app.add_option("--slave_id", slave_id_)->required();
-        app.add_option("--slave_name, slave_name_")->required();
+        app.add_option("--slave_name", slave_name_)->required();
         app.add_option("--slave_num", slave_num_)->required();
         app.add_option("--log_dir", log_dir_);
     }
