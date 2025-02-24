@@ -71,7 +71,8 @@ void RunnerSlave::generate() {
         }
         BatchTask generate_dataset_dir(dir_requests.size(), 0,
                                        dataset_config.write_threads,
-                                       dataset_config.sample_size, fs);
+                                       dataset_config.sample_size, fs,
+                                       "GenDatasetDir");
         generate_dataset_dir.startIOCtrlThread(dir_requests);
         generate_dataset_dir.mainTask();
         generate_dataset_dir.stopIOCtrlThread();
@@ -90,7 +91,8 @@ void RunnerSlave::generate() {
     }
     BatchTask generate_dataset_file(file_requests.size(), 0,
                                     dataset_config.write_threads,
-                                    dataset_config.sample_size, fs);
+                                    dataset_config.sample_size, fs,
+                                    "GenDatasetFile");
     generate_dataset_file.startIOCtrlThread(file_requests);
     generate_dataset_file.mainTask();
     generate_dataset_file.stopIOCtrlThread();
