@@ -28,7 +28,7 @@ void RunnerMaster::startRpcServer() {
 
 bool RunnerMaster::waitAllSlaveRegister() const {
     const auto limits = std::chrono::system_clock::now() +
-                        std::chrono::seconds(10);
+                        std::chrono::seconds(100);
     while (std::chrono::system_clock::now() < limits) {
         if (!slave_status_->allSlaveRegistered()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
