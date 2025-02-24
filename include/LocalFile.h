@@ -8,13 +8,17 @@
 class LocalFile final : public File
 {
 public:
-    bool read(char* buffer, int pos, int size) override;
+    bool read(char* buffer, long long pos, long long size) override;
 
-    bool write(const char* buffer, int pos, int size) override;
+    bool write(const char* buffer, long long pos, long long size) override;
+
+    bool writeWholeFile(long long size, long long transfer_size) override;
 
     bool open(std::string path, Flag flag) override;
 
     void close() override;
+
+    ~LocalFile() override = default;
 
 private:
     std::fstream file_;

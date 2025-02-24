@@ -160,7 +160,7 @@ void ConfigManager::fromYaml(const std::string& file) {
             }
         }
     } catch (const std::exception& e) {
-        LOGF(FATAL, e.what());
+        LOGF(FATAL, "%s", e.what());
         LOGF(WARNING, "Can't load yaml file %s. Use default config instead",
              file.c_str());
     }

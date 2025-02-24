@@ -1,14 +1,17 @@
 workflow:
-  gen_sample: true
-train:
-  epochs: 10
+  gen_data: true
+  train: false
+  checkpoint: false
+  gen_sample: false
 dataset:
+  sample_size: 65536
+  sample_num: 24
+  data_folder: ./data
   sample_sub_dir:
-    - 1
     - 2
     - 3
-    - 4
-  sample_size:
-    10
-generate:
-  transfer_size_stdev: 0.5
+  write_threads: 4
+checkpoint:
+  checkpoint_folder: ./checkpoints
+  checkpoint_size: 409600
+  write_transfer_size: 262144

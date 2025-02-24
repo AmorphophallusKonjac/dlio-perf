@@ -12,19 +12,21 @@ public:
         WRITE = 1 << 1
     };
 
-    virtual bool read(char* buffer, int pos, int size) = 0;
+    virtual bool read(char* buffer, long long pos, long long size) = 0;
 
-    virtual bool write(const char* buffer, int pos, int size) = 0;
+    virtual bool write(const char* buffer, long long pos, long long size) = 0;
+
+    virtual bool writeWholeFile(long long size, long long transfer_size) = 0;
 
     virtual bool open(std::string path, Flag flag) = 0;
 
     virtual void close() = 0;
 
-    virtual ~File();
+    virtual ~File() = default;
 
 protected:
     std::string path_;
-    int pos_ = 0;
+    long long pos_ = 0;
 };
 
 

@@ -11,6 +11,8 @@ public:
     std::vector<std::string> readDir(std::string path) override;
 
     bool createDir(std::string path) override;
+
+    ~LocalFileSystem() override = default;
 };
 
 

@@ -11,6 +11,8 @@ target_include_directories(dlio-perf_lib PUBLIC
         "${rest_rpc_SOURCE_DIR}/thirdparty/asio"
         "${rest_rpc_SOURCE_DIR}/include"
 )
-
 target_link_libraries(dlio-perf_lib PUBLIC yaml-cpp::yaml-cpp)
+
 target_link_libraries(dlio-perf_lib PUBLIC g3log)
+
+target_link_libraries(dlio-perf_lib PRIVATE Threads::Threads)
