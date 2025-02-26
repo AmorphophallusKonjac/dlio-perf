@@ -3,6 +3,8 @@
 
 #include <string>
 #include <vector>
+#include <rest_rpc/rpc_client.hpp>
+#include <rest_rpc/rpc_server.h>
 
 class ConfigManager
 {
@@ -26,7 +28,7 @@ public:
 
     struct DatasetConfig
     {
-        int sample_size = 65536;
+        int sample_size = 262144;
         long long sample_num = 1;
         std::string data_folder = "./data";
         std::vector<int> sample_sub_dir = std::vector<int>();
@@ -53,7 +55,8 @@ public:
         int batch_size = 1;
         int read_threads = 1;
         int prefetch_size = 0;
-        bool shuffle = false;
+        std::string shuffle = "none";
+        std::string seed = "rand";
         int transfer_size = 262144;
         double transfer_size_stdev = 0.0;
     };
@@ -77,13 +80,13 @@ public:
 
         std::string checkpoint_folder = "./checkpoints";
         int checkpoint_interval = 1;
-        long long checkpoint_size = 1024;
+        long long checkpoint_size = 262144;
         int read_threads = 1;
         int write_threads = 1;
         CheckpointTy checkpoint_write_type = SYNC;
-        int read_transfer_size = 262144;
+        long long read_transfer_size = 262144;
         double read_transfer_size_stdev = 0.0;
-        int write_transfer_size = 262144;
+        long long write_transfer_size = 262144;
         double write_transfer_size_stdev = 0.0;
     };
 
@@ -108,8 +111,11 @@ public:
 
     void fromYaml(const std::string& file);
 
+    uint32_t getRandSeed(rest_rpc::rpc_service::rpc_conn conn);
+
 private:
     ConfigManager() = default;
+    void checkConfig();
 };
 
 

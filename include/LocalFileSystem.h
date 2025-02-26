@@ -8,7 +8,7 @@ class LocalFileSystem final : public FileSystem
 public:
     std::unique_ptr<File> getFileDescriptor() override;
 
-    std::vector<std::string> readDir(std::string path) override;
+    std::vector<Dentry> readDir(std::string path) override;
 
     bool createDir(std::string path) override;
 

@@ -5,6 +5,7 @@
 #include <string>
 #include <rest_rpc.hpp>
 #include <FileSystemFactory.h>
+#include <random>
 
 class RunnerSlave
 {
@@ -13,17 +14,24 @@ public:
     void start();
 
 private:
+    std::vector<std::string> getShuffleFileList();
+    bool run();
     void generate();
+    void getTrainFileList();
     void initialize();
     void registerSelf();
     bool reportReady();
+    void reportFinish(bool success);
     void waitStart();
+    uint32_t getRandSeed() const;
 
     int slave_id_;
     int slave_num_;
     std::unique_ptr<rest_rpc::rpc_client> rpc_client_;
     std::string name_;
     FileSystemFactory fs_factory_;
+    std::mt19937 rand_engine_;
+    std::vector<std::string> trainFileList_;
 };
 
 

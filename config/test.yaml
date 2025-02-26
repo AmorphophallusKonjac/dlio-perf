@@ -1,6 +1,6 @@
 workflow:
-  gen_data: true
-  train: false
+  gen_data: false
+  train: true
   checkpoint: false
   gen_sample: false
 dataset:
@@ -11,6 +11,15 @@ dataset:
     - 2
     - 3
   write_threads: 4
+reader:
+  batch_size: 8
+  read_threads: 4
+  prefetch_size: 0
+  shuffle: none
+  seed: rand
+  transfer_size: 65536
+train:
+  epochs: 10
 checkpoint:
   checkpoint_folder: ./checkpoints
   checkpoint_size: 409600

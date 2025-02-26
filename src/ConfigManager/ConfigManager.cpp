@@ -4,6 +4,7 @@
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
 #include <g3log/g3log.hpp>
+#include <random>
 
 void ConfigManager::fromYaml(const std::string& file) {
     try {
@@ -94,7 +95,10 @@ void ConfigManager::fromYaml(const std::string& file) {
                 reader.prefetch_size = node.as<int>();
             }
             if (const auto node = config["reader"]["shuffle"]) {
-                reader.shuffle = node.as<bool>();
+                reader.shuffle = node.as<std::string>();
+            }
+            if (const auto node = config["reader"]["seed"]) {
+                reader.seed = node.as<std::string>();
             }
             if (const auto node = config["reader"]["transfer_size"]) {
                 reader.transfer_size = node.as<int>();
@@ -139,14 +143,14 @@ void ConfigManager::fromYaml(const std::string& file) {
                 }
             }
             if (const auto node = config["checkpoint"]["read_transfer_size"]) {
-                checkpoint.read_transfer_size = node.as<int>();
+                checkpoint.read_transfer_size = node.as<long long>();
             }
             if (const auto node = config["checkpoint"][
                 "read_transfer_size_stdev"]) {
                 checkpoint.read_transfer_size_stdev = node.as<double>();
             }
             if (const auto node = config["checkpoint"]["write_transfer_size"]) {
-                checkpoint.write_transfer_size = node.as<int>();
+                checkpoint.write_transfer_size = node.as<long long>();
             }
             if (const auto node = config["checkpoint"][
                 "write_transfer_size_stdev"]) {
@@ -164,4 +168,21 @@ void ConfigManager::fromYaml(const std::string& file) {
         LOGF(WARNING, "Can't load yaml file %s. Use default config instead",
              file.c_str());
     }
+    checkConfig();
+}
+
+uint32_t ConfigManager::getRandSeed(rest_rpc::rpc_service::rpc_conn conn) {
+    if (reader.seed == "rand") {
+        std::random_device rd;
+        reader.seed = std::to_string(rd());
+    }
+    return std::stoul(reader.seed);
+}
+
+void ConfigManager::checkConfig() {
+    reader.transfer_size = std::min(dataset.sample_size, reader.transfer_size);
+    checkpoint.read_transfer_size = std::min(checkpoint.read_transfer_size,
+                                             checkpoint.checkpoint_size);
+    checkpoint.write_transfer_size = std::min(checkpoint.write_transfer_size,
+                                              checkpoint.checkpoint_size);
 }

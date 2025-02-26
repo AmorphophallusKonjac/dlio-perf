@@ -27,15 +27,20 @@ public:
 
     bool slaveReady(rest_rpc::rpc_service::rpc_conn conn, std::string slave);
 
+    void slaveFinish(rest_rpc::rpc_service::rpc_conn conn, std::string slave, bool success);
+
     bool allSlaveRegistered();
 
     bool allSlaveReady();
+
+    bool allSlaveFinish();
 
 private:
     int slave_num_;
     StatusSet unready_slaves_;
     StatusSet ready_slaves_;
     StatusSet success_slaves_;
+    StatusSet fail_slaves_;
 };
 
 

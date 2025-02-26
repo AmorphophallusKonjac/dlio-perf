@@ -33,6 +33,19 @@ bool SlaveStatus::slaveReady(rest_rpc::rpc_service::rpc_conn conn,
     return ready_slaves_.size() == slave_num_;
 }
 
+void SlaveStatus::slaveFinish(rest_rpc::rpc_service::rpc_conn conn,
+                              std::string slave, bool success) {
+    if (success) {
+        success_slaves_.insert(slave);
+    } else {
+        fail_slaves_.insert(slave);
+    }
+}
+
 bool SlaveStatus::allSlaveRegistered() {
     return slave_num_ == unready_slaves_.size();
+}
+
+bool SlaveStatus::allSlaveFinish() {
+    return slave_num_ == success_slaves_.size() + fail_slaves_.size();
 }
