@@ -14,6 +14,8 @@ public:
 
     bool writeWholeFile(long long size, long long transfer_size) override;
 
+    bool readWholeFile(long long size, long long transfer_size) override;
+
     bool open(std::string path, Flag flag) override;
 
     void close() override;

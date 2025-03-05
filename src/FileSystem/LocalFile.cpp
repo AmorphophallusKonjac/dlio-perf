@@ -54,6 +54,27 @@ bool LocalFile::writeWholeFile(long long size, long long transfer_size) {
     }
 }
 
+bool LocalFile::readWholeFile(long long size, long long transfer_size) {
+    try {
+        const auto buffer = new char[transfer_size];
+        if (pos_ != 0) {
+            file_.seekp(0);
+            pos_ = 0;
+        }
+        while (pos_ < size) {
+            if (pos_ + transfer_size > size)
+                read(buffer, pos_, size - pos_);
+            else
+                read(buffer, pos_, transfer_size);
+        }
+        delete[] buffer;
+        return true;
+    } catch (const std::exception& e) {
+        LOGF(FATAL, "write %s fail, %s", path_.c_str(), e.what());
+        return false;
+    }
+}
+
 bool LocalFile::open(std::string path, Flag flag) {
     try {
         path_ = path;

@@ -18,6 +18,8 @@ public:
 
     virtual bool writeWholeFile(long long size, long long transfer_size) = 0;
 
+    virtual bool readWholeFile(long long size, long long transfer_size) = 0;
+
     virtual bool open(std::string path, Flag flag) = 0;
 
     virtual void close() = 0;

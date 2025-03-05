@@ -17,8 +17,9 @@ public:
     TaskTy ty;
     std::string path;
     long long size;
+    long long pos;
 
-    IORequest(TaskTy ty, std::string path, long long size);
+    IORequest(TaskTy ty, std::string path, long long size, long long pos = -1);
     IORequest();
     bool empty() const;
     void execute(FileSystem* fs, long long transfer_size, char* buffer) const;

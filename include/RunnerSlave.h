@@ -6,6 +6,7 @@
 #include <rest_rpc.hpp>
 #include <FileSystemFactory.h>
 #include <random>
+#include <CheckpointFactory.h>
 
 class RunnerSlave
 {
@@ -30,6 +31,7 @@ private:
     std::unique_ptr<rest_rpc::rpc_client> rpc_client_;
     std::string name_;
     FileSystemFactory fs_factory_;
+    CheckpointFactory ck_factory_;
     std::mt19937 rand_engine_;
     std::vector<std::string> trainFileList_;
 };

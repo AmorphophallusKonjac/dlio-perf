@@ -4,7 +4,7 @@ workflow:
   checkpoint: false
   gen_sample: false
 dataset:
-  sample_size: 65536
+  sample_size: 524288
   sample_num: 24
   data_folder: ./data
   sample_sub_dir:
@@ -17,10 +17,16 @@ reader:
   prefetch_size: 0
   shuffle: none
   seed: rand
-  transfer_size: 65536
+  transfer_size: 524288
 train:
   epochs: 10
 checkpoint:
   checkpoint_folder: ./checkpoints
   checkpoint_size: 409600
   write_transfer_size: 262144
+  read_transfer_size: 262144
+  checkpoint_type: sync
+  checkpoint_interval: 5
+  checkpoint_layers: 1
+  read_threads: 1
+  write_threads: 1

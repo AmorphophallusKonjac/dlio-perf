@@ -70,10 +70,13 @@ bool RunnerSlave::run() {
             const auto epochs = ConfigManager::getInstance().train.epochs;
             const auto reader_config = ConfigManager::getInstance().reader;
             const auto dataset_config = ConfigManager::getInstance().dataset;
+            const auto checkpoint_config = ConfigManager::getInstance().
+                checkpoint;
             const auto fs = fs_factory_.getFileSystem();
             const auto batch_steps = (dataset_config.sample_num / slave_num_) /
                                      reader_config.batch_size;
             // load checkpoint
+            // ck_factory_.getCheckpoint(slave_id_, fs)->load();
             // start batch
             for (int i = 0; i < epochs; ++i) {
                 auto train_file_list = getShuffleFileList();
@@ -92,6 +95,9 @@ bool RunnerSlave::run() {
                     read_sample_task.mainTask();
                 }
                 read_sample_task.stopIOCtrlThread();
+                if (i && i % checkpoint_config.checkpoint_interval == 0) {
+                    ck_factory_.getCheckpoint(slave_id_, fs)->save();
+                }
             }
             LOGF(INFO, "Benchmark finish");
             return true;
@@ -104,18 +110,13 @@ bool RunnerSlave::run() {
 }
 
 void RunnerSlave::generate() {
-    fs::path work_dir = fs::current_path();
     const auto dataset_config = ConfigManager::getInstance().dataset;
     const auto checkpoint_config = ConfigManager::getInstance().checkpoint;
     const auto fs = fs_factory_.getFileSystem();
     std::vector<IORequest> dir_requests;
     std::vector<IORequest> file_requests;
-    fs::path data_folder(dataset_config.data_folder);
-    if (data_folder.is_relative()) {
-        data_folder = (work_dir / data_folder).lexically_normal();
-    }
     // generate dataset dir
-    fs->createDir(data_folder.string());
+    fs->createDir(dataset_config.data_folder);
     long long dir_num = 1;
     std::vector<int> dir_encode;
     for (auto dir_dim_num : dataset_config.sample_sub_dir) {
@@ -125,7 +126,7 @@ void RunnerSlave::generate() {
         for (int& i : dir_encode)
             i = 0;
         for (long long i = 0; i < dir_num; ++i) {
-            fs::path dir = data_folder;
+            fs::path dir = dataset_config.data_folder;
             for (const auto idx : dir_encode) {
                 dir /= "dir" + std::to_string(idx);
             }
@@ -169,19 +170,7 @@ void RunnerSlave::generate() {
     generate_dataset_file.mainTask();
     generate_dataset_file.stopIOCtrlThread();
     // generate checkpoint file
-    file_requests.clear();
-    fs::path ck_folder(checkpoint_config.checkpoint_folder);
-    if (ck_folder.is_relative()) {
-        ck_folder = (work_dir / ck_folder).lexically_normal();
-    }
-    fs->createDir(ck_folder.string());
-    fs::path ck_file_path =
-        ck_folder / ("checkpoint_" + std::to_string(slave_id_) + "_0");
-    auto ck_file = fs->getFileDescriptor();
-    ck_file->open(ck_file_path.string(), File::WRITE);
-    ck_file->writeWholeFile(checkpoint_config.checkpoint_size,
-                            checkpoint_config.write_transfer_size);
-    ck_file->close();
+    ck_factory_.getCheckpoint(slave_id_, fs)->generate();
 }
 
 void RunnerSlave::getTrainFileList() {

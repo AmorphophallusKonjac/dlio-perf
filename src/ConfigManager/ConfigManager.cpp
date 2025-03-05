@@ -5,6 +5,9 @@
 #include <yaml-cpp/node/parse.h>
 #include <g3log/g3log.hpp>
 #include <random>
+#include <filesystem>
+
+namespace fs = std::filesystem;
 
 void ConfigManager::fromYaml(const std::string& file) {
     try {
@@ -124,6 +127,9 @@ void ConfigManager::fromYaml(const std::string& file) {
             if (const auto node = config["checkpoint"]["checkpoint_size"]) {
                 checkpoint.checkpoint_size = node.as<long long>();
             }
+            if (const auto node = config["checkpoint"]["checkpoint_layers"]) {
+                checkpoint.checkpoint_layers = node.as<int>();
+            }
             if (const auto node = config["checkpoint"]["read_threads"]) {
                 checkpoint.read_threads = node.as<int>();
             }
@@ -133,13 +139,15 @@ void ConfigManager::fromYaml(const std::string& file) {
             if (const auto node = config["checkpoint"][
                 "checkpoint_write_type"]) {
                 if (node.as<std::string>() == "sync") {
-                    checkpoint.checkpoint_write_type = CheckpointConfig::SYNC;
+                    checkpoint.checkpoint_type = CheckpointConfig::SYNC;
                 } else if (node.as<std::string>() == "asyn") {
-                    checkpoint.checkpoint_write_type = CheckpointConfig::ASYN;
+                    checkpoint.checkpoint_type = CheckpointConfig::ASYN;
+                } else if (node.as<std::string>() == "snapshot") {
+                    checkpoint.checkpoint_type = CheckpointConfig::SNAPSHOP;
                 } else {
                     LOGF(WARNING,
                          "Unknown checkpoint write type. Use sync type");
-                    checkpoint.checkpoint_write_type = CheckpointConfig::SYNC;
+                    checkpoint.checkpoint_type = CheckpointConfig::SYNC;
                 }
             }
             if (const auto node = config["checkpoint"]["read_transfer_size"]) {
@@ -185,4 +193,14 @@ void ConfigManager::checkConfig() {
                                              checkpoint.checkpoint_size);
     checkpoint.write_transfer_size = std::min(checkpoint.write_transfer_size,
                                               checkpoint.checkpoint_size);
+    const fs::path work_dir = fs::current_path();
+    if (const auto data_folder = fs::path(dataset.data_folder);
+        data_folder.is_relative())
+        dataset.data_folder = (work_dir / dataset.data_folder).
+                              lexically_normal().string();
+    if (const auto ck_folder = fs::path(checkpoint.checkpoint_folder);
+        ck_folder.is_relative())
+        checkpoint.checkpoint_folder =
+            (work_dir / checkpoint.checkpoint_folder).
+            lexically_normal().string();
 }

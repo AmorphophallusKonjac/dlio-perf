@@ -75,7 +75,8 @@ public:
         enum CheckpointTy
         {
             SYNC,
-            ASYN
+            ASYN,
+            SNAPSHOP
         };
 
         std::string checkpoint_folder = "./checkpoints";
@@ -83,7 +84,8 @@ public:
         long long checkpoint_size = 262144;
         int read_threads = 1;
         int write_threads = 1;
-        CheckpointTy checkpoint_write_type = SYNC;
+        CheckpointTy checkpoint_type = SYNC;
+        int checkpoint_layers = 1;
         long long read_transfer_size = 262144;
         double read_transfer_size_stdev = 0.0;
         long long write_transfer_size = 262144;
