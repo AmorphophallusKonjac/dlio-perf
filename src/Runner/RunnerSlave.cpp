@@ -76,7 +76,7 @@ bool RunnerSlave::run() {
             const auto batch_steps = (dataset_config.sample_num / slave_num_) /
                                      reader_config.batch_size;
             // load checkpoint
-            // ck_factory_.getCheckpoint(slave_id_, fs)->load();
+            ck_factory_.getCheckpoint(slave_id_, fs)->load();
             // start batch
             for (int i = 0; i < epochs; ++i) {
                 auto train_file_list = getShuffleFileList();

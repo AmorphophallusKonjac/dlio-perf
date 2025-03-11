@@ -6,9 +6,11 @@
 bool LocalFile::read(char* buffer, const long long pos, const long long size) {
     try {
         if (pos != pos_) {
-            file_.seekp(pos);
+            file_.seekg(pos);
             pos_ = pos;
         }
+        LOG(DEBUG) << "file: " << path_.c_str() << ",pos: " << file_.tellg() <<
+ ",size: " << size;
         file_.read(buffer, size);
         pos_ = pos + size;
         return true;
@@ -25,6 +27,7 @@ bool LocalFile::write(const char* buffer, long long pos, long long size) {
             pos_ = pos;
         }
         file_.write(buffer, size);
+        file_.flush();
         pos_ = pos + size;
         return true;
     } catch (const std::exception& e) {
@@ -58,7 +61,7 @@ bool LocalFile::readWholeFile(long long size, long long transfer_size) {
     try {
         const auto buffer = new char[transfer_size];
         if (pos_ != 0) {
-            file_.seekp(0);
+            file_.seekg(0);
             pos_ = 0;
         }
         while (pos_ < size) {
@@ -81,9 +84,11 @@ bool LocalFile::open(std::string path, Flag flag) {
         switch (flag) {
             case READ:
                 file_.open(path, std::ios::in);
+                pos_ = file_.tellg();
                 break;
             case WRITE:
                 file_.open(path, std::ios::out);
+                pos_ = file_.tellp();
                 break;
         }
         return true;

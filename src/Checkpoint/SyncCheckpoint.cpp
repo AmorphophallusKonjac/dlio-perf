@@ -1,7 +1,6 @@
 #include "SyncCheckpoint.h"
 
 #include <ConfigManager.h>
-#include <g3log/g3log.hpp>
 #include <filesystem>
 
 namespace fs = std::filesystem;

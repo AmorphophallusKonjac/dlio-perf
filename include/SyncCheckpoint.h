@@ -13,7 +13,7 @@ public:
     void generate() override;
 
 private:
-    void loadThread(const std::vector<IORequest> requests) const;
+    void loadThread(std::vector<IORequest> requests) const;
 };
 
 
