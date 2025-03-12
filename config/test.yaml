@@ -28,5 +28,4 @@ checkpoint:
   checkpoint_type: sync
   checkpoint_interval: 5
   checkpoint_layers: 1
-  read_threads: 1
-  write_threads: 1
+  read_threads: 4

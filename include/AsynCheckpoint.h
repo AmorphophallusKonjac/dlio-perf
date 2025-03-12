@@ -16,7 +16,7 @@ public:
     ~AsynCheckpoint();
 
 private:
-    void loadThread(std::vector<IORequest> requests) const;
+    void loadThread(IORequest request) const;
     void saveThread();
 
     std::thread save_thread_;

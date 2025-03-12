@@ -16,13 +16,18 @@ public:
 
     TaskTy ty;
     std::string path;
-    long long size;
-    long long pos;
-
-    IORequest(TaskTy ty, std::string path, long long size, long long pos = -1);
+    long long transfer_size;
+    IORequest(TaskTy ty, std::string path, long long size, long long pos, long long transfer_size, FileSystem* fs);
+    IORequest(TaskTy ty, std::string path, long long transfer_size, FileSystem* fs);
     IORequest();
     bool empty() const;
-    void execute(FileSystem* fs, long long transfer_size, char* buffer) const;
+    void execute() const;
+    void addIOReq(long long pos, long size);
+
+private:
+    FileSystem* fs;
+    std::vector<long long> size_;
+    std::vector<long long> pos_;
 };
 
 #endif //IOREQUEST_H

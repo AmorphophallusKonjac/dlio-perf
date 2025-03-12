@@ -4,61 +4,76 @@
 #include <g3log/g3log.hpp>
 
 IORequest::IORequest(const TaskTy ty, std::string path, const long long size,
-                     const long long pos) :
-    ty(ty), path(std::move(path)), size(size), pos(pos) {
+                     const long long pos, const long long transfer_size,
+                     FileSystem* fs) :
+    ty(ty), path(std::move(path)),
+    transfer_size(transfer_size), fs(fs) {
+    this->size_.emplace_back(size);
+    this->pos_.emplace_back(pos);
 }
 
-IORequest::IORequest() : ty(READ), size(0), pos(-1) {
+IORequest::IORequest(TaskTy ty, std::string path, long long transfer_size,
+                     FileSystem* fs) : ty(ty), path(std::move(path)),
+                                       transfer_size(transfer_size), fs(fs) {
+}
+
+IORequest::IORequest() : ty(READ), transfer_size(-1), fs(nullptr) {
 }
 
 bool IORequest::empty() const {
     return path.empty();
 }
 
-void IORequest::execute(FileSystem* fs, const long long transfer_size,
-                        char* buffer) const {
+void IORequest::execute() const {
     const auto file = fs->getFileDescriptor();
-    if (pos == -1) {
+    switch (ty) {
+        case READ:
+            file->open(path, File::Flag::READ);
+            break;
+        case WRITE:
+            file->open(path, File::Flag::WRITE);
+            break;
+        default:
+            break;
+    }
+    for (size_t i = 0; i < pos_.size(); ++i) {
+        auto pos = pos_[i];
+        auto size = size_[i];
+        const auto buffer = new char[size];
         switch (ty) {
             case READ:
-                file->open(path, File::Flag::READ);
                 for (long long i = 0; i < size; i = i + transfer_size) {
                     if (i + transfer_size > size)
-                        file->read(buffer, i, size - i);
+                        file->read(buffer, pos + i, size - i);
                     else
-                        file->read(buffer, i, transfer_size);
+                        file->read(buffer, pos + i, transfer_size);
                 }
-                file->close();
                 break;
             case WRITE:
-                file->open(path, File::Flag::WRITE);
                 for (long long i = 0; i < size; i = i + transfer_size) {
                     if (i + transfer_size > size)
-                        file->write(buffer, i, size - i);
+                        file->write(buffer, pos + i, size - i);
                     else
-                        file->write(buffer, i, transfer_size);
+                        file->write(buffer, pos + i, transfer_size);
                 }
-                file->close();
                 break;
             case CREATE_DIR:
                 fs->createDir(path);
                 break;
         }
-    } else {
-        switch (ty) {
-            case READ:
-                file->open(path, File::Flag::READ);
-                file->read(buffer, pos, size);
-                file->close();
-                break;
-            case WRITE:
-                file->open(path, File::Flag::WRITE);
-                file->write(buffer, pos, size);
-                file->close();
-                break;
-            case CREATE_DIR:
-                throw std::runtime_error("Error IORequest type");
-                break;
-        }
+        delete[] buffer;
     }
+    switch (ty) {
+        case READ:
+        case WRITE:
+            file->close();
+            break;
+        default:
+            break;
+    }
+}
+
+void IORequest::addIOReq(long long pos, long size) {
+    this->pos_.emplace_back(pos);
+    this->size_.emplace_back(size);
 }

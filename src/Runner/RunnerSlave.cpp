@@ -68,35 +68,20 @@ bool RunnerSlave::run() {
         try {
             LOGF(INFO, "Start benchmark...");
             const auto epochs = ConfigManager::getInstance().train.epochs;
+            const auto workflow_config = ConfigManager::getInstance().workflow;
             const auto reader_config = ConfigManager::getInstance().reader;
             const auto dataset_config = ConfigManager::getInstance().dataset;
             const auto checkpoint_config = ConfigManager::getInstance().
                 checkpoint;
             const auto fs = fs_factory_.getFileSystem();
-            const auto batch_steps = (dataset_config.sample_num / slave_num_) /
-                                     reader_config.batch_size;
             // load checkpoint
-            ck_factory_.getCheckpoint(slave_id_, fs)->load();
+            loadCheckpoint();
             // start batch
             for (int i = 0; i < epochs; ++i) {
-                auto train_file_list = getShuffleFileList();
-                std::vector<IORequest> reader_requests;
-                for (auto file : train_file_list) {
-                    reader_requests.emplace_back(IORequest::READ, file,
-                                                 dataset_config.sample_size);
-                }
-                BatchTask read_sample_task(reader_config.batch_size,
-                                           reader_config.prefetch_size,
-                                           reader_config.read_threads,
-                                           reader_config.transfer_size, fs,
-                                           "reader");
-                read_sample_task.startIOCtrlThread(reader_requests);
-                for (int j = 0; j < batch_steps; ++j) {
-                    read_sample_task.mainTask();
-                }
-                read_sample_task.stopIOCtrlThread();
-                if (i && i % checkpoint_config.checkpoint_interval == 0) {
-                    ck_factory_.getCheckpoint(slave_id_, fs)->save();
+                readSamples();
+                if (workflow_config.checkpoint && i && i % checkpoint_config.
+                    checkpoint_interval == 0) {
+                    saveCheckpoint();
                 }
             }
             LOGF(INFO, "Benchmark finish");
@@ -107,6 +92,42 @@ bool RunnerSlave::run() {
         }
     }
     return true;
+}
+
+void RunnerSlave::readSamples() {
+    const auto reader_config = ConfigManager::getInstance().reader;
+    const auto dataset_config = ConfigManager::getInstance().dataset;
+    const auto fs = fs_factory_.getFileSystem();
+    auto train_file_list = getShuffleFileList();
+    const auto batch_steps = (dataset_config.sample_num / slave_num_) /
+                             reader_config.batch_size;
+    std::vector<IORequest> reader_requests;
+    for (auto file : train_file_list) {
+        reader_requests.emplace_back(IORequest::READ, file,
+                                     dataset_config.sample_size, 0,
+                                     reader_config.transfer_size,
+                                     fs);
+    }
+    BatchTask read_sample_task(reader_config.batch_size,
+                               reader_config.prefetch_size,
+                               reader_config.read_threads,
+                               reader_config.transfer_size,
+                               "reader");
+    read_sample_task.startIOCtrlThread(reader_requests);
+    for (int j = 0; j < batch_steps; ++j) {
+        read_sample_task.mainTask();
+    }
+    read_sample_task.stopIOCtrlThread();
+}
+
+void RunnerSlave::loadCheckpoint() {
+    const auto fs = fs_factory_.getFileSystem();
+    ck_factory_.getCheckpoint(slave_id_, fs)->load();
+}
+
+void RunnerSlave::saveCheckpoint() {
+    const auto fs = fs_factory_.getFileSystem();
+    ck_factory_.getCheckpoint(slave_id_, fs)->save();
 }
 
 void RunnerSlave::generate() {
@@ -131,8 +152,7 @@ void RunnerSlave::generate() {
                 dir /= "dir" + std::to_string(idx);
             }
             dir_requests.emplace_back(IORequest::TaskTy::CREATE_DIR,
-                                      dir.string(),
-                                      0);
+                                      dir.string(), 0, 0, 0, fs);
             for (int j = dir_encode.size() - 1; j >= 0; --j) {
                 ++dir_encode[j];
                 if (dir_encode[j] == dataset_config.sample_sub_dir[j]) {
@@ -144,7 +164,7 @@ void RunnerSlave::generate() {
         }
         BatchTask generate_dataset_dir(dir_requests.size(), 0,
                                        dataset_config.write_threads,
-                                       dataset_config.sample_size, fs,
+                                       dataset_config.sample_size,
                                        "GenDatasetDir");
         generate_dataset_dir.startIOCtrlThread(dir_requests);
         generate_dataset_dir.mainTask();
@@ -160,11 +180,12 @@ void RunnerSlave::generate() {
         auto file_path = fs::path(dir_requests[j].path) / (
                              "sample" + std::to_string(i));
         file_requests.emplace_back(IORequest::TaskTy::WRITE, file_path.string(),
-                                   dataset_config.sample_size);
+                                   dataset_config.sample_size, 0,
+                                   dataset_config.sample_size, fs);
     }
     BatchTask generate_dataset_file(file_requests.size(), 0,
                                     dataset_config.write_threads,
-                                    dataset_config.sample_size, fs,
+                                    dataset_config.sample_size,
                                     "GenDatasetFile");
     generate_dataset_file.startIOCtrlThread(file_requests);
     generate_dataset_file.mainTask();

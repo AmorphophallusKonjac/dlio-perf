@@ -17,6 +17,9 @@ public:
 private:
     std::vector<std::string> getShuffleFileList();
     bool run();
+    void readSamples();
+    void loadCheckpoint();
+    void saveCheckpoint();
     void generate();
     void getTrainFileList();
     void initialize();

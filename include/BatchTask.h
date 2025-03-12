@@ -9,7 +9,7 @@
 class BatchTask
 {
 public:
-    BatchTask(long long batch_size, int prefetch_size, int thread_num, long long transfer_size, FileSystem* fs, std::string task_name);
+    BatchTask(long long batch_size, int prefetch_size, int thread_num, long long transfer_size, std::string task_name);
     void mainTask();
     void startIOCtrlThread(const std::vector<IORequest>& requests);
     void stopIOCtrlThread();
@@ -22,7 +22,6 @@ private:
     long long batch_size_;
     int thread_num_;
     long long transfer_size_;
-    FileSystem* fs_;
     RequestQueue request_queue_;
     Semaphore thread_finish_;
     Semaphore batch_gen_;
