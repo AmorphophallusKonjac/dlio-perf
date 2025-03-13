@@ -1,6 +1,5 @@
 #include "LocalFile.h"
 
-#include <asio/registered_buffer.hpp>
 #include <g3log/g3log.hpp>
 
 bool LocalFile::read(char* buffer, const long long pos, const long long size) {
@@ -9,8 +8,6 @@ bool LocalFile::read(char* buffer, const long long pos, const long long size) {
             file_.seekg(pos);
             pos_ = pos;
         }
-        LOG(DEBUG) << "file: " << path_.c_str() << ",pos: " << file_.tellg() <<
- ",size: " << size;
         file_.read(buffer, size);
         pos_ = pos + size;
         return true;

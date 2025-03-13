@@ -5,9 +5,13 @@
 #include <g3log/g3log.hpp>
 #include <ConfigManager.h>
 #include <FileSystem.h>
+#include <PerfCounter.h>
+#include <yaml-cpp/yaml.h>
+
 #include <numeric>
 #include <filesystem>
 #include <utility>
+#include <fstream>
 
 namespace fs = std::filesystem;
 
@@ -28,6 +32,9 @@ void RunnerSlave::start() {
         waitStart();
         // benchmark start
         reportFinish(run());
+        // benchmark finish
+        if (ConfigManager::getInstance().workflow.train)
+            finalize();
     } catch (const std::exception& e) {
         LOGF(FATAL, "%s", e.what());
     }
@@ -271,4 +278,16 @@ uint32_t RunnerSlave::getRandSeed() const {
     }
     const auto ret = rpc_client_->call<uint32_t>("getRandSeed");
     return ret;
+}
+
+void RunnerSlave::finalize() {
+    std::filesystem::path output_folder(
+        ConfigManager::getInstance().output.folder);
+    report["slave_name"] = name_;
+    report["slave_id"] = slave_id_;
+    report["perf"] = PerfCounter::getInstance().getPerfResult();
+    create_directory(output_folder);
+    std::ofstream result(output_folder / (name_ + "_result.yaml"));
+    result << report;
+    result.close();
 }

@@ -1,8 +1,7 @@
 workflow:
   gen_data: false
   train: true
-  checkpoint: false
-  gen_sample: false
+  checkpoint: true
 dataset:
   sample_size: 524288
   sample_num: 24
@@ -29,3 +28,5 @@ checkpoint:
   checkpoint_interval: 5
   checkpoint_layers: 1
   read_threads: 4
+output:
+  folder: ./result

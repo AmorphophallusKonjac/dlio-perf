@@ -203,4 +203,8 @@ void ConfigManager::checkConfig() {
         checkpoint.checkpoint_folder =
             (work_dir / checkpoint.checkpoint_folder).
             lexically_normal().string();
+    if (const auto res_folder = fs::path(output.folder); res_folder.
+        is_relative()) {
+        output.folder = (work_dir / output.folder).lexically_normal().string();
+    }
 }

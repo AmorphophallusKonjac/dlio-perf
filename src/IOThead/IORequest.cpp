@@ -1,6 +1,7 @@
 #include "IORequest.h"
 
-#include <asio/registered_buffer.hpp>
+#include <PerfCounter.h>
+
 #include <g3log/g3log.hpp>
 
 IORequest::IORequest(const TaskTy ty, std::string path, const long long size,
@@ -27,12 +28,22 @@ bool IORequest::empty() const {
 void IORequest::execute() const {
     const auto file = fs->getFileDescriptor();
     switch (ty) {
-        case READ:
+        case READ: {
+            auto start = std::chrono::steady_clock::now();
             file->open(path, File::Flag::READ);
-            break;
-        case WRITE:
+            auto end = std::chrono::steady_clock::now();
+            PerfCounter::getInstance().addOperation(
+                OperationInfo::OPEN, start, end);
+        }
+        break;
+        case WRITE: {
+            auto start = std::chrono::steady_clock::now();
             file->open(path, File::Flag::WRITE);
-            break;
+            auto end = std::chrono::steady_clock::now();
+            PerfCounter::getInstance().addOperation(
+                OperationInfo::OPEN, start, end);
+        }
+        break;
         default:
             break;
     }
@@ -43,18 +54,26 @@ void IORequest::execute() const {
         switch (ty) {
             case READ:
                 for (long long i = 0; i < size; i = i + transfer_size) {
+                    auto trans_size = transfer_size;
                     if (i + transfer_size > size)
-                        file->read(buffer, pos + i, size - i);
-                    else
-                        file->read(buffer, pos + i, transfer_size);
+                        trans_size = size - i;
+                    auto start = std::chrono::steady_clock::now();
+                    file->read(buffer, pos + i, trans_size);
+                    auto end = std::chrono::steady_clock::now();
+                    PerfCounter::getInstance().addOperation(
+                        OperationInfo::READ, start, end, trans_size);
                 }
                 break;
             case WRITE:
                 for (long long i = 0; i < size; i = i + transfer_size) {
+                    auto trans_size = transfer_size;
                     if (i + transfer_size > size)
-                        file->write(buffer, pos + i, size - i);
-                    else
-                        file->write(buffer, pos + i, transfer_size);
+                        trans_size = size - i;
+                    auto start = std::chrono::steady_clock::now();
+                    file->write(buffer, pos + i, trans_size);
+                    auto end = std::chrono::steady_clock::now();
+                    PerfCounter::getInstance().addOperation(
+                        OperationInfo::WRITE, start, end, trans_size);
                 }
                 break;
             case CREATE_DIR:

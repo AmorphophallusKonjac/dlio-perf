@@ -7,6 +7,7 @@
 #include <FileSystemFactory.h>
 #include <random>
 #include <CheckpointFactory.h>
+#include <yaml-cpp/yaml.h>
 
 class RunnerSlave
 {
@@ -28,6 +29,7 @@ private:
     void reportFinish(bool success);
     void waitStart();
     uint32_t getRandSeed() const;
+    void finalize();
 
     int slave_id_;
     int slave_num_;
@@ -37,6 +39,7 @@ private:
     CheckpointFactory ck_factory_;
     std::mt19937 rand_engine_;
     std::vector<std::string> trainFileList_;
+    YAML::Node report;
 };
 
 
