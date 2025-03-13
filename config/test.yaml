@@ -1,6 +1,6 @@
 workflow:
-  gen_data: false
-  train: true
+  gen_data: true
+  train: false
   checkpoint: true
 dataset:
   sample_size: 524288

@@ -23,6 +23,7 @@ RunnerSlave::RunnerSlave(const std::string& host, unsigned short port,
     rpc_client_(std::make_unique<rest_rpc::rpc_client>(host, port)),
     name_(std::move(name)) {
     rpc_client_->enable_auto_reconnect();
+    rpc_client_->enable_auto_heartbeat();
 }
 
 void RunnerSlave::start() {
@@ -80,7 +81,6 @@ bool RunnerSlave::run() {
             const auto dataset_config = ConfigManager::getInstance().dataset;
             const auto checkpoint_config = ConfigManager::getInstance().
                 checkpoint;
-            const auto fs = fs_factory_.getFileSystem();
             // load checkpoint
             loadCheckpoint();
             // start batch
@@ -98,6 +98,7 @@ bool RunnerSlave::run() {
             return false;
         }
     }
+    LOGF(INFO, "Skip benchmark");
     return true;
 }
 
@@ -236,6 +237,7 @@ void RunnerSlave::initialize() {
     getTrainFileList();
     LOGF(INFO, "Dataset scan done");
     rand_engine_.seed(getRandSeed());
+    LOGF(INFO, "Finish initialization");
 }
 
 void RunnerSlave::registerSelf() {
@@ -263,6 +265,7 @@ void RunnerSlave::reportFinish(bool success) {
         throw std::runtime_error("Fail to connect server");
     }
     rpc_client_->call<void>("reportFinish", name_, success);
+    rpc_client_->close();
 }
 
 void RunnerSlave::waitStart() {
@@ -277,6 +280,7 @@ uint32_t RunnerSlave::getRandSeed() const {
         throw std::runtime_error("Fail to connect server");
     }
     const auto ret = rpc_client_->call<uint32_t>("getRandSeed");
+    rpc_client_->close();
     return ret;
 }
 
