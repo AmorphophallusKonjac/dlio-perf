@@ -13,13 +13,17 @@ RunnerMaster::RunnerMaster(unsigned short port, size_t size, int slave_num) :
 void RunnerMaster::start() {
     startRpcServer();
     LOGF(INFO, "Wait all slaves to register...");
+    std::cout << "Wait all slaves to register..." << std::endl;
     if (!waitAllSlaveRegister()) {
         throw std::runtime_error("Slave start failed");
     }
     LOGF(INFO, "All slaves registered...");
+    std::cout << "All slaves registered..." << std::endl << "Start benchmark" <<
+        std::endl;
     LOGF(INFO, "Wait all slaves to finished");
     waitAllSlaveFinish();
     LOGF(INFO, "All slaves finished");
+    std::cout << "All slaves finished" << std::endl;
 }
 
 void RunnerMaster::startRpcServer() {
