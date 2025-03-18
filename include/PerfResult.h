@@ -23,6 +23,16 @@ public:
 template <typename T>
 PerfResult<T> PerfResult<T>::calcPerfResult(const std::vector<T>& vec)
 {
+    if (vec.size() == 0)
+    {
+        PerfResult<T> res;
+        res.avg = 0;
+        res.max = 0;
+        res.min = 0;
+        res.stddev = 0;
+        res.samples = 0;
+        return res;
+    }
     auto max_it = std::max_element(vec.begin(), vec.end());
     auto min_it = std::min_element(vec.begin(), vec.end());
     T max_val = *max_it;

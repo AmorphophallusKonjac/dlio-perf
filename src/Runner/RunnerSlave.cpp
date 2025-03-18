@@ -61,11 +61,11 @@ std::vector<std::string> RunnerSlave::getShuffleFileList() {
 }
 
 bool RunnerSlave::run() {
-    if (slave_id_ == 0) {
-        spdlog::info("Benchmark start");
-    }
     if (ConfigManager::getInstance().workflow.train) {
         try {
+            if (slave_id_ == 0) {
+                spdlog::info("Benchmark start");
+            }
             const auto epochs = ConfigManager::getInstance().train.epochs;
             const auto workflow_config = ConfigManager::getInstance().workflow;
             const auto reader_config = ConfigManager::getInstance().reader;
@@ -85,6 +85,7 @@ bool RunnerSlave::run() {
             }
             return true;
         } catch (const std::exception& e) {
+            spdlog::error("Rank {} fail. {}", slave_id_, e.what());
             return false;
         }
     }
@@ -190,29 +191,43 @@ void RunnerSlave::generate() {
     generate_dataset_file.stopIOCtrlThread();
     // generate checkpoint file
     ck_factory_.getCheckpoint(slave_id_, fs)->generate();
+    spdlog::info("Finish generate data");
 }
 
 void RunnerSlave::getTrainFileList() {
-    const auto fs = fs_factory_.getFileSystem();
     trainFileList_.clear();
-    std::queue<std::string> queue;
-    for (queue.push(ConfigManager::getInstance().dataset.data_folder); !queue.
-         empty(); queue.pop()) {
-        auto dentry_vector = fs->readDir(queue.front());
-        for (const auto& dentry : dentry_vector) {
-            switch (dentry.ty_) {
-                case Dentry::DIR:
-                    queue.push(dentry.path_);
-                    break;
-                case Dentry::FILE:
-                    trainFileList_.emplace_back(dentry.path_);
-                    break;
+    std::vector<int> dir_encode;
+    const auto dataset_config = ConfigManager::getInstance().dataset;
+    long long dir_num = 1;
+    for (auto dir_dim_num : dataset_config.sample_sub_dir) {
+        dir_encode.push_back(0);
+        dir_num *= dir_dim_num;
+    }
+    const auto sample_num_per_subdir =
+        dataset_config.sample_num / dir_num + (
+            (dataset_config.sample_num % dir_num) != 0);
+    std::vector<std::string> dir_list;
+    for (long long i = 0; i < dir_num; ++i) {
+        fs::path dir = dataset_config.data_folder;
+        for (const auto idx : dir_encode) {
+            dir /= "dir" + std::to_string(idx);
+        }
+        dir_list.push_back(dir.string());
+        for (int j = dir_encode.size() - 1; j >= 0; --j) {
+            ++dir_encode[j];
+            if (dir_encode[j] == dataset_config.sample_sub_dir[j]) {
+                dir_encode[j] = 0;
+            } else {
+                break;
             }
         }
     }
-    if (trainFileList_.size() != ConfigManager::getInstance().dataset.
-        sample_num) {
-        throw std::runtime_error("Dataset error");
+    for (int i = 0, j = -1; i < dataset_config.sample_num; ++i) {
+        if (i % sample_num_per_subdir == 0)
+            ++j;
+        auto file_path = fs::path(dir_list[j]) / (
+                             "sample" + std::to_string(i));
+        trainFileList_.push_back(file_path.string());
     }
 }
 
@@ -224,6 +239,7 @@ void RunnerSlave::initialize() {
     MPI_Barrier(MPI_COMM_WORLD);
     getTrainFileList();
     rand_engine_.seed(getRandSeed());
+    spdlog::info("Finish initialize");
 }
 
 uint32_t RunnerSlave::getRandSeed() const {
