@@ -26,7 +26,7 @@ void RunnerSlave::start() {
         MPI_Barrier(MPI_COMM_WORLD);
         finalize();
     } catch (const std::exception& e) {
-        spdlog::error("rank {} fail", slave_id_);
+        spdlog::error("rank {} fail. {}", slave_id_, e.what());
     }
 }
 
