@@ -1,12 +1,11 @@
 #include "RunnerSlave.h"
 
 #include <BatchTask.h>
-#include <rest_rpc.hpp>
-#include <g3log/g3log.hpp>
 #include <ConfigManager.h>
 #include <FileSystem.h>
 #include <PerfCounter.h>
-#include <yaml-cpp/yaml.h>
+#include <mpi.h>
+#include <spdlog/spdlog.h>
 
 #include <numeric>
 #include <filesystem>
@@ -15,29 +14,19 @@
 
 namespace fs = std::filesystem;
 
-RunnerSlave::RunnerSlave(const std::string& host, unsigned short port,
-                         std::string name, const int slave_id,
-                         const int slave_num) :
-    slave_id_(slave_id),
-    slave_num_(slave_num),
-    rpc_client_(std::make_unique<rest_rpc::rpc_client>(host, port)),
-    name_(std::move(name)) {
-    rpc_client_->enable_auto_reconnect();
-    rpc_client_->enable_auto_heartbeat();
+RunnerSlave::RunnerSlave(const int slave_id, const int slave_num) :
+    slave_id_(slave_id), slave_num_(slave_num) {
 }
 
 void RunnerSlave::start() {
     try {
-        registerSelf();
         initialize();
-        waitStart();
-        // benchmark start
-        reportFinish(run());
-        // benchmark finish
-        if (ConfigManager::getInstance().workflow.train)
-            finalize();
+        MPI_Barrier(MPI_COMM_WORLD);
+        run();
+        MPI_Barrier(MPI_COMM_WORLD);
+        finalize();
     } catch (const std::exception& e) {
-        LOGF(FATAL, "%s", e.what());
+        spdlog::error("rank {} fail", slave_id_);
     }
 }
 
@@ -72,9 +61,11 @@ std::vector<std::string> RunnerSlave::getShuffleFileList() {
 }
 
 bool RunnerSlave::run() {
+    if (slave_id_ == 0) {
+        spdlog::info("Benchmark start");
+    }
     if (ConfigManager::getInstance().workflow.train) {
         try {
-            LOGF(INFO, "Start benchmark...");
             const auto epochs = ConfigManager::getInstance().train.epochs;
             const auto workflow_config = ConfigManager::getInstance().workflow;
             const auto reader_config = ConfigManager::getInstance().reader;
@@ -91,14 +82,11 @@ bool RunnerSlave::run() {
                     saveCheckpoint();
                 }
             }
-            LOGF(INFO, "Benchmark finish");
             return true;
         } catch (const std::exception& e) {
-            LOGF(FATAL, "slave %s exception: %s", name_.c_str(), e.what());
             return false;
         }
     }
-    LOGF(INFO, "Skip benchmark");
     return true;
 }
 
@@ -139,6 +127,7 @@ void RunnerSlave::saveCheckpoint() {
 }
 
 void RunnerSlave::generate() {
+    spdlog::info("Start generate data...");
     const auto dataset_config = ConfigManager::getInstance().dataset;
     const auto checkpoint_config = ConfigManager::getInstance().checkpoint;
     const auto fs = fs_factory_.getFileSystem();
@@ -227,71 +216,40 @@ void RunnerSlave::getTrainFileList() {
 }
 
 void RunnerSlave::initialize() {
-    LOGF(INFO, "Start initialization...");
-    if (ConfigManager::getInstance().workflow.gen_data) {
-        LOGF(INFO, "Start generate dataset & checkpoint...");
+    spdlog::info("Start initialize...");
+    if (ConfigManager::getInstance().workflow.gen_data && slave_id_ == 0) {
         generate();
-        LOGF(INFO, "Dataset & checkpoint generate done");
     }
-    LOGF(INFO, "Scan dataset to get train file list...");
+    MPI_Barrier(MPI_COMM_WORLD);
     getTrainFileList();
-    LOGF(INFO, "Dataset scan done");
     rand_engine_.seed(getRandSeed());
-    LOGF(INFO, "Finish initialization");
-}
-
-void RunnerSlave::registerSelf() {
-    if (!rpc_client_->connect(10)) {
-        LOGF(FATAL, "Slave connect timeout");
-        throw std::runtime_error("Fail to connect server");
-    }
-    rpc_client_->call<void>("register", name_);
-    rpc_client_->close();
-}
-
-bool RunnerSlave::reportReady() {
-    if (!rpc_client_->connect(10)) {
-        LOGF(FATAL, "Slave connect timeout");
-        throw std::runtime_error("Fail to connect server");
-    }
-    const auto ret = rpc_client_->call<bool>("reportReady", name_);
-    rpc_client_->close();
-    return ret;
-}
-
-void RunnerSlave::reportFinish(bool success) {
-    if (!rpc_client_->connect(10)) {
-        LOGF(FATAL, "Slave connect timeout");
-        throw std::runtime_error("Fail to connect server");
-    }
-    rpc_client_->call<void>("reportFinish", name_, success);
-    rpc_client_->close();
-}
-
-void RunnerSlave::waitStart() {
-    while (!reportReady()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1000));
-    }
 }
 
 uint32_t RunnerSlave::getRandSeed() const {
-    if (!rpc_client_->connect(10)) {
-        LOGF(FATAL, "Slave connect timeout");
-        throw std::runtime_error("Fail to connect server");
+    const auto seed_str = ConfigManager::getInstance().reader.seed;
+    uint32_t seed;
+    if (slave_id_ == 0) {
+        if (seed_str == "rand") {
+            std::random_device rd;
+            seed = rd();
+        } else {
+            seed = std::stoul(seed_str);
+        }
     }
-    const auto ret = rpc_client_->call<uint32_t>("getRandSeed");
-    rpc_client_->close();
-    return ret;
+    MPI_Bcast(&seed, 1, MPI_INT32_T, 0, MPI_COMM_WORLD);
+    return seed;
 }
 
 void RunnerSlave::finalize() {
+    if (ConfigManager::getInstance().workflow.train == false)
+        return;
     std::filesystem::path output_folder(
         ConfigManager::getInstance().output.folder);
-    report["slave_name"] = name_;
-    report["slave_id"] = slave_id_;
+    report["rank"] = slave_id_;
     report["perf"] = PerfCounter::getInstance().getPerfResult();
     create_directory(output_folder);
-    std::ofstream result(output_folder / (name_ + "_result.yaml"));
+    std::ofstream result(
+        output_folder / (std::to_string(slave_id_) + "_result.yaml"));
     result << report;
     result.close();
 }

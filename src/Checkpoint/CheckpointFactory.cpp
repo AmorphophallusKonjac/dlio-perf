@@ -3,6 +3,8 @@
 #include <ConfigManager.h>
 #include <SyncCheckpoint.h>
 
+#include <stdexcept>
+
 Checkpoint*
 CheckpointFactory::getCheckpoint(const int slave_id, FileSystem* fs) {
     if (ck_)

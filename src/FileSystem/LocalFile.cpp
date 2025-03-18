@@ -1,6 +1,6 @@
 #include "LocalFile.h"
 
-#include <g3log/g3log.hpp>
+#include <spdlog/spdlog.h>
 
 bool LocalFile::read(char* buffer, const long long pos, const long long size) {
     try {
@@ -12,7 +12,7 @@ bool LocalFile::read(char* buffer, const long long pos, const long long size) {
         pos_ = pos + size;
         return true;
     } catch (const std::exception& e) {
-        LOGF(FATAL, "read %s fail, %s", path_.c_str(), e.what());
+        spdlog::error("read {} fail, {}", path_, e.what());
         return false;
     }
 }
@@ -28,7 +28,7 @@ bool LocalFile::write(const char* buffer, long long pos, long long size) {
         pos_ = pos + size;
         return true;
     } catch (const std::exception& e) {
-        LOGF(FATAL, "write %s fail, %s", path_.c_str(), e.what());
+        spdlog::error("write {} fail, {}", path_, e.what());
         return false;
     }
 }
@@ -49,7 +49,7 @@ bool LocalFile::writeWholeFile(long long size, long long transfer_size) {
         delete[] buffer;
         return true;
     } catch (const std::exception& e) {
-        LOGF(FATAL, "write %s fail, %s", path_.c_str(), e.what());
+        spdlog::error("write {} fail, {}", path_, e.what());
         return false;
     }
 }
@@ -70,7 +70,7 @@ bool LocalFile::readWholeFile(long long size, long long transfer_size) {
         delete[] buffer;
         return true;
     } catch (const std::exception& e) {
-        LOGF(FATAL, "write %s fail, %s", path_.c_str(), e.what());
+        spdlog::error("read {} fail, {}", path_, e.what());
         return false;
     }
 }
@@ -90,7 +90,7 @@ bool LocalFile::open(std::string path, Flag flag) {
         }
         return true;
     } catch (const std::exception& e) {
-        LOGF(FATAL, "open %s fail, %s", path_.c_str(), e.what());
+        spdlog::error("open {} fail, {}", path_, e.what());
         return false;
     }
 }

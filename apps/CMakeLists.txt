@@ -1,3 +1,1 @@
-add_subdirectory(master)
-
-add_subdirectory(slave)
+add_subdirectory(dlio-perf)

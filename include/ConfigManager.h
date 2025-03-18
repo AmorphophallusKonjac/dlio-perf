@@ -3,8 +3,6 @@
 
 #include <string>
 #include <vector>
-#include <rest_rpc/rpc_client.hpp>
-#include <rest_rpc/rpc_server.h>
 
 class ConfigManager
 {
@@ -112,8 +110,6 @@ public:
     }
 
     void fromYaml(const std::string& file);
-
-    uint32_t getRandSeed(rest_rpc::rpc_service::rpc_conn conn);
 
 private:
     ConfigManager() = default;

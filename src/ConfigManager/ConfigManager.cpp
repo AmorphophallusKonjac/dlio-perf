@@ -1,9 +1,9 @@
 #include "ConfigManager.h"
 
+#include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
 #include <yaml-cpp/node/node.h>
 #include <yaml-cpp/node/parse.h>
-#include <g3log/g3log.hpp>
 #include <random>
 #include <filesystem>
 
@@ -11,7 +11,7 @@ namespace fs = std::filesystem;
 
 void ConfigManager::fromYaml(const std::string& file) {
     try {
-        LOGF(INFO, "Loading yaml file %s", file.c_str());
+        spdlog::info("Loading yaml file {}", file);
         YAML::Node config = YAML::LoadFile(file);
 
         if (config["env"]) {
@@ -145,8 +145,8 @@ void ConfigManager::fromYaml(const std::string& file) {
                 } else if (node.as<std::string>() == "snapshot") {
                     checkpoint.checkpoint_type = CheckpointConfig::SNAPSHOP;
                 } else {
-                    LOGF(WARNING,
-                         "Unknown checkpoint write type. Use sync type");
+                    spdlog::warn(
+                        "Unknown checkpoint write type. Use sync type");
                     checkpoint.checkpoint_type = CheckpointConfig::SYNC;
                 }
             }
@@ -172,19 +172,9 @@ void ConfigManager::fromYaml(const std::string& file) {
             }
         }
     } catch (const std::exception& e) {
-        LOGF(FATAL, "%s", e.what());
-        LOGF(WARNING, "Can't load yaml file %s. Use default config instead",
-             file.c_str());
+        spdlog::error(e.what());
     }
     checkConfig();
-}
-
-uint32_t ConfigManager::getRandSeed(rest_rpc::rpc_service::rpc_conn conn) {
-    if (reader.seed == "rand") {
-        std::random_device rd;
-        reader.seed = std::to_string(rd());
-    }
-    return std::stoul(reader.seed);
 }
 
 void ConfigManager::checkConfig() {

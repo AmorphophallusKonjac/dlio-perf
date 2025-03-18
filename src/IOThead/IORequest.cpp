@@ -2,8 +2,6 @@
 
 #include <PerfCounter.h>
 
-#include <g3log/g3log.hpp>
-
 IORequest::IORequest(const TaskTy ty, std::string path, const long long size,
                      const long long pos, const long long transfer_size,
                      FileSystem* fs) :

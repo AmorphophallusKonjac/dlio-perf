@@ -16,6 +16,8 @@ set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake" ${CMAKE_MODULE_PATH})
 
 find_package(Threads REQUIRED)
 
+find_package(MPI REQUIRED)
+
 add_subdirectory(third_party)
 
 add_subdirectory(src)
