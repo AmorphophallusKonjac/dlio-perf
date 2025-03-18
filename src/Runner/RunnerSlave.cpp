@@ -76,6 +76,7 @@ bool RunnerSlave::run() {
             loadCheckpoint();
             // start batch
             for (int i = 0; i < epochs; ++i) {
+                spdlog::info("Rank {} start epoch {}", slave_id_, i);
                 readSamples();
                 if (workflow_config.checkpoint && i && i % checkpoint_config.
                     checkpoint_interval == 0) {
