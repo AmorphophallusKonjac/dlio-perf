@@ -11,6 +11,7 @@ public:
     std::vector<Dentry> readDir(std::string path) override;
 
     bool createDir(std::string path) override;
+    void remove(std::string path) override;
 
     ~LocalFileSystem() override = default;
 };

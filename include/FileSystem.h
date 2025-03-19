@@ -16,6 +16,8 @@ public:
 
     virtual bool createDir(std::string path) = 0;
 
+    virtual void remove(std::string path) = 0;
+
     virtual ~FileSystem() = default;
 };
 

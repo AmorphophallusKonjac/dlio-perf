@@ -10,6 +10,7 @@ public:
     virtual void load() = 0;
     virtual void save() = 0;
     virtual void finalize() = 0;
+    void clear() const;
     virtual ~Checkpoint() = default;
 
 protected:

@@ -24,3 +24,7 @@ bool LocalFileSystem::createDir(std::string path) {
     return fs::create_directory(path);
 }
 
+void LocalFileSystem::remove(std::string path) {
+    fs::remove(path);
+}
+

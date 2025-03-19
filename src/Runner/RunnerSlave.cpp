@@ -266,6 +266,8 @@ uint32_t RunnerSlave::getRandSeed() const {
 void RunnerSlave::finalize() {
     if (ConfigManager::getInstance().workflow.train == false)
         return;
+    const auto fs = fs_factory_.getFileSystem();
+    ck_factory_.getCheckpoint(slave_id_, fs)->clear();
     std::filesystem::path output_folder(
         ConfigManager::getInstance().output.folder);
     report["rank"] = slave_id_;
