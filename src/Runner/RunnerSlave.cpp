@@ -83,6 +83,7 @@ bool RunnerSlave::run() {
                     saveCheckpoint();
                 }
             }
+            waitCheckpoint();
             return true;
         } catch (const std::exception& e) {
             spdlog::error("Rank {} fail. {}", slave_id_, e.what());
@@ -126,6 +127,11 @@ void RunnerSlave::loadCheckpoint() {
 void RunnerSlave::saveCheckpoint() {
     const auto fs = fs_factory_.getFileSystem();
     ck_factory_.getCheckpoint(slave_id_, fs)->save();
+}
+
+void RunnerSlave::waitCheckpoint() {
+    const auto fs = fs_factory_.getFileSystem();
+    ck_factory_.getCheckpoint(slave_id_, fs)->finalize();
 }
 
 void RunnerSlave::generate() {

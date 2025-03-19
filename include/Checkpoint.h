@@ -9,6 +9,7 @@ public:
     virtual void generate() = 0;
     virtual void load() = 0;
     virtual void save() = 0;
+    virtual void finalize() = 0;
     virtual ~Checkpoint() = default;
 
 protected:

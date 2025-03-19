@@ -19,6 +19,7 @@ private:
     void readSamples();
     void loadCheckpoint();
     void saveCheckpoint();
+    void waitCheckpoint();
     void generate();
     void getTrainFileList();
     void initialize();

@@ -2,6 +2,7 @@
 
 #include <filesystem>
 #include <ConfigManager.h>
+#include <spdlog/spdlog.h>
 
 namespace fs = std::filesystem;
 
@@ -14,8 +15,8 @@ AsynCheckpoint::AsynCheckpoint(int slave_id, FileSystem* fs) : Checkpoint(
 void AsynCheckpoint::generate() {
     const auto ck_config = ConfigManager::getInstance().checkpoint;
     fs_->createDir(ck_config.checkpoint_folder);
-    const auto ck_path = fs::path(ck_config.checkpoint_folder) / (
-                             "checkpoint_" + std::to_string(slave_id_) + "_0");
+    const auto ck_path = fs::path(ck_config.checkpoint_folder) /
+                         "checkpoint_base";
     const auto ck_file = fs_->getFileDescriptor();
     ck_file->open(ck_path, File::WRITE);
     ck_file->writeWholeFile(ck_config.checkpoint_size,
@@ -25,9 +26,12 @@ void AsynCheckpoint::generate() {
 
 void AsynCheckpoint::load() {
     const auto ck_config = ConfigManager::getInstance().checkpoint;
-    const auto ck_path = fs::path(ck_config.checkpoint_folder) / (
-                             "checkpoint_" + std::to_string(slave_id_) + "_" +
-                             std::to_string(counter_));
+    auto ck_path = fs::path(ck_config.checkpoint_folder) / (
+                       "checkpoint_" + std::to_string(slave_id_) + "_" +
+                       std::to_string(counter_));
+    if (counter_ == 0) {
+        ck_path = fs::path(ck_config.checkpoint_folder) / "checkpoint_base";
+    }
     const auto size = ck_config.checkpoint_size;
     const auto layers = ck_config.checkpoint_layers;
     long long pos = 0;
@@ -65,7 +69,7 @@ void AsynCheckpoint::save() {
     sem_.signal(1);
 }
 
-AsynCheckpoint::~AsynCheckpoint() {
+void AsynCheckpoint::finalize() {
     stop_flag_ = true;
     if (save_thread_.joinable())
         save_thread_.join();
@@ -80,6 +84,7 @@ void AsynCheckpoint::saveThread() {
         sem_.wait(1);
         if (stop_flag_)
             break;
+        spdlog::info("Rank {} start save checkpoint {}", slave_id_, counter_ + 1);
         const auto ck_config = ConfigManager::getInstance().checkpoint;
         const auto ck_path = fs::path(ck_config.checkpoint_folder) / (
                                  "checkpoint_" + std::to_string(slave_id_) + "_"

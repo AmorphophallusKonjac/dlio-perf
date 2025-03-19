@@ -13,7 +13,7 @@ public:
     void generate() override;
     void load() override;
     void save() override;
-    ~AsynCheckpoint();
+    void finalize() override;
 
 private:
     void loadThread(IORequest request) const;

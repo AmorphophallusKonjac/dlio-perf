@@ -11,6 +11,7 @@ public:
     void load() override;
     void save() override;
     void generate() override;
+    void finalize() override;
 
 private:
     void loadThread(IORequest request) const;
