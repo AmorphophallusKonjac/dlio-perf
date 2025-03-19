@@ -16,13 +16,20 @@ namespace fs = std::filesystem;
 
 RunnerSlave::RunnerSlave(const int slave_id, const int slave_num) :
     slave_id_(slave_id), slave_num_(slave_num) {
+    ConfigManager::getInstance().slave_id_ = slave_id;
+    ConfigManager::getInstance().slave_num_ = slave_num;
 }
 
 void RunnerSlave::start() {
     try {
         initialize();
+        if (slave_id_ == 0) {
+            spdlog::info("Benchmark start");
+        }
         MPI_Barrier(MPI_COMM_WORLD);
+        start_time_point_ = std::chrono::steady_clock::now();
         run();
+        end_time_point_ = std::chrono::steady_clock::now();
         MPI_Barrier(MPI_COMM_WORLD);
         finalize();
     } catch (const std::exception& e) {
@@ -63,9 +70,6 @@ std::vector<std::string> RunnerSlave::getShuffleFileList() {
 bool RunnerSlave::run() {
     if (ConfigManager::getInstance().workflow.train) {
         try {
-            if (slave_id_ == 0) {
-                spdlog::info("Benchmark start");
-            }
             const auto epochs = ConfigManager::getInstance().train.epochs;
             const auto workflow_config = ConfigManager::getInstance().workflow;
             const auto reader_config = ConfigManager::getInstance().reader;
@@ -266,15 +270,22 @@ uint32_t RunnerSlave::getRandSeed() const {
 void RunnerSlave::finalize() {
     if (ConfigManager::getInstance().workflow.train == false)
         return;
-    const auto fs = fs_factory_.getFileSystem();
-    ck_factory_.getCheckpoint(slave_id_, fs)->clear();
+    PerfCounter::getInstance().setRefTimePoint(start_time_point_,
+                                               end_time_point_);
+    PerfCounter::getInstance().preprocess();
     std::filesystem::path output_folder(
         ConfigManager::getInstance().output.folder);
-    report["rank"] = slave_id_;
-    report["perf"] = PerfCounter::getInstance().getPerfResult();
     create_directory(output_folder);
+    auto this_rank_perf = PerfCounter::getInstance().perfThisRank();
     std::ofstream result(
-        output_folder / (std::to_string(slave_id_) + "_result.yaml"));
-    result << report;
+        output_folder / ("rank_" + std::to_string(slave_id_) + "_result.yaml"));
+    result << this_rank_perf;
     result.close();
+
+    if (slave_id_ == 0 && slave_num_ > 1) {
+        auto all_rank_perf = PerfCounter::getInstance().perfAllRank();
+        result.open(output_folder / "all_rank_result.yaml");
+        result << all_rank_perf;
+        result.close();
+    }
 }

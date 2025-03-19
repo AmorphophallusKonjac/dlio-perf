@@ -31,7 +31,7 @@ void IORequest::execute() const {
             file->open(path, File::Flag::READ);
             auto end = std::chrono::steady_clock::now();
             PerfCounter::getInstance().addOperation(
-                OperationInfo::OPEN, start, end);
+                OPEN, start, end);
         }
         break;
         case WRITE: {
@@ -39,7 +39,7 @@ void IORequest::execute() const {
             file->open(path, File::Flag::WRITE);
             auto end = std::chrono::steady_clock::now();
             PerfCounter::getInstance().addOperation(
-                OperationInfo::OPEN, start, end);
+                OPEN, start, end);
         }
         break;
         default:
@@ -59,7 +59,7 @@ void IORequest::execute() const {
                     file->read(buffer, pos + i, trans_size);
                     auto end = std::chrono::steady_clock::now();
                     PerfCounter::getInstance().addOperation(
-                        OperationInfo::READ, start, end, trans_size);
+                        OperationTy::READ, start, end, trans_size);
                 }
                 break;
             case WRITE:
@@ -71,7 +71,7 @@ void IORequest::execute() const {
                     file->write(buffer, pos + i, trans_size);
                     auto end = std::chrono::steady_clock::now();
                     PerfCounter::getInstance().addOperation(
-                        OperationInfo::WRITE, start, end, trans_size);
+                        OperationTy::WRITE, start, end, trans_size);
                 }
                 break;
             case CREATE_DIR:

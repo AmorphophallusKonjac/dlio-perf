@@ -3,26 +3,29 @@
 
 #include<chrono>
 
-
-class OperationInfo
+enum OperationTy
 {
-public:
-    enum OperationTy
-    {
-        READ,
-        WRITE,
-        OPEN
-    };
+    READ,
+    WRITE,
+    OPEN
+};
 
-    OperationInfo(OperationTy ty, std::chrono::steady_clock::time_point start_time,
-                  std::chrono::steady_clock::time_point end_time);
-    OperationInfo(OperationTy ty, std::chrono::steady_clock::time_point start_time,
-                  std::chrono::steady_clock::time_point end_time, long long size);
+struct OperationInfo
+{
     std::chrono::steady_clock::time_point start_time;
     std::chrono::steady_clock::time_point end_time;
-    std::chrono::nanoseconds latency{};
+    std::chrono::nanoseconds latency;
     OperationTy ty;
     long long size;
+};
+
+struct OperationRefInfo
+{
+    long long ref_start_time; // second
+    long long ref_end_time; // second
+    long long latency; // microsecond
+    long long size;
+    long long ty;
 };
 
 

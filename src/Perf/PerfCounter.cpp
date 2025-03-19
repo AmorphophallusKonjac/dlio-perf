@@ -1,74 +1,51 @@
 #include "PerfCounter.h"
 
+#include <ConfigManager.h>
+#include <mpi.h>
+#include <spdlog/spdlog.h>
+
 #include <iomanip>
 #include <map>
 #include <mutex>
-#include <boost/mpl/push_back.hpp>
 
-void PerfCounter::addOperation(const OperationInfo& op) {
-    std::lock_guard lock_guard(ops_mutex_);
-    switch (op.ty) {
-        case OperationInfo::READ:
-            read_ops_.push_back(op);
-            lat_read_ops_.push_back(op.latency.count() / 1000);
-            gra_read_ops_.push_back(op.size / 1024);
-            break;
-        case OperationInfo::WRITE:
-            write_ops_.push_back(op);
-            lat_write_ops_.push_back(op.latency.count() / 1000);
-            gra_write_ops_.push_back(op.size / 1024);
-            break;
-        case OperationInfo::OPEN:
-            open_ops_.push_back(op);
-            lat_open_ops_.push_back(op.latency.count() / 1000);
-            break;
-    }
-}
-
-void PerfCounter::addOperation(OperationInfo::OperationTy ty,
-                               std::chrono::steady_clock::time_point start_time,
-                               std::chrono::steady_clock::time_point end_time) {
-    std::lock_guard lock_guard(ops_mutex_);
-    switch (ty) {
-        case OperationInfo::READ:
-            throw std::runtime_error("No size");
-            break;
-        case OperationInfo::WRITE:
-            throw std::runtime_error("No size");
-            break;
-        case OperationInfo::OPEN:
-            open_ops_.emplace_back(ty, start_time, end_time);
-            lat_open_ops_.push_back(open_ops_.back().latency.count() / 1000);
-            break;
-    }
-}
-
-void PerfCounter::addOperation(OperationInfo::OperationTy ty,
+void PerfCounter::addOperation(OperationTy ty,
                                std::chrono::steady_clock::time_point start_time,
                                std::chrono::steady_clock::time_point end_time,
                                long long size) {
     std::lock_guard lock_guard(ops_mutex_);
-    switch (ty) {
-        case OperationInfo::READ:
-            read_ops_.emplace_back(ty, start_time, end_time, size);
-            lat_read_ops_.push_back(read_ops_.back().latency.count() / 1000);
-            break;
-        case OperationInfo::WRITE:
-            write_ops_.emplace_back(ty, start_time, end_time, size);
-            lat_write_ops_.push_back(write_ops_.back().latency.count() / 1000);
-            break;
-        case OperationInfo::OPEN:
-            throw std::runtime_error("open do not have size");
-            break;
-    }
+    ops_.push_back({start_time, end_time,
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        end_time - start_time),
+                    ty, size});
 }
 
-YAML::Node PerfCounter::getPerfResult() {
+YAML::Node PerfCounter::getPerfResult(std::vector<OperationRefInfo>& ops) {
     YAML::Node perf_summary;
-    BW_perf open_bw;
-    calcPerfResult(read_ops_, read_qps_, read_bw_);
-    calcPerfResult(write_ops_, write_qps_, write_bw_);
-    calcPerfResult(open_ops_, open_qps_, open_bw);
+    std::vector<OperationRefInfo> read_ops_, write_ops_, open_ops_;
+    std::vector<long long> lat_read_ops_, lat_write_ops_, lat_open_ops_;
+    for (auto op : ops) {
+        switch (op.ty) {
+            case OPEN:
+                open_ops_.push_back(op);
+                lat_open_ops_.push_back(op.latency);
+                break;
+            case WRITE:
+                write_ops_.push_back(op);
+                lat_write_ops_.push_back(op.latency);
+                break;
+            case READ:
+                read_ops_.push_back(op);
+                lat_read_ops_.push_back(op.latency);
+                break;
+            default:
+                throw std::runtime_error("error op");
+        }
+    }
+    QPS_perf read_qps_, write_qps_, open_qps_;
+    BW_perf read_bw_, write_bw_, open_bw_;
+    calcQpsAndBw(read_ops_, read_qps_, read_bw_);
+    calcQpsAndBw(write_ops_, write_qps_, write_bw_);
+    calcQpsAndBw(open_ops_, open_qps_, open_bw_);
     auto read_lat_per = getPercentiles(lat_read_ops_, latPercentiles);
     auto write_lat_per = getPercentiles(lat_write_ops_, latPercentiles);
     auto open_lat_per = getPercentiles(lat_open_ops_, latPercentiles);
@@ -87,7 +64,7 @@ YAML::Node PerfCounter::getPerfResult() {
     perf_summary["write"]["latency(microseconds)"]["percentiles"] =
         percentilesToYaml<long long>(write_lat_per);
 
-    perf_summary["open"]["qps"] = write_qps_.toYaml();
+    perf_summary["open"]["qps"] = open_qps_.toYaml();
     perf_summary["open"]["latency (microseconds)"] = PerfResult<long
         long>::calcPerfResult(lat_open_ops_).toYaml();
     perf_summary["open"]["latency(microseconds)"]["percentiles"] =
@@ -95,20 +72,79 @@ YAML::Node PerfCounter::getPerfResult() {
     return perf_summary;
 }
 
-void PerfCounter::calcPerfResult(std::vector<OperationInfo>& ops, QPS_perf& qps,
-                                 BW_perf& bw) {
-    std::map<int, std::pair<int, long long>> results;
+void PerfCounter::setRefTimePoint(
+    std::chrono::steady_clock::time_point start_time_point,
+    std::chrono::steady_clock::time_point end_time_point) {
+    start_time_point_ = start_time_point;
+    end_time_point_ = end_time_point;
+}
+
+void PerfCounter::preprocess() {
+    for (auto op : ops_) {
+        long long start_second = std::chrono::duration_cast<
+            std::chrono::seconds>(op.start_time - start_time_point_).count();
+        long long end_second = std::chrono::duration_cast<std::chrono::seconds>(
+            op.end_time - start_time_point_).count();
+        long long latency = op.latency.count() / 1000;
+        ref_ops_.push_back({start_second, end_second, latency, op.size, op.ty});
+    }
+    if (ConfigManager::getInstance().slave_id_ == 0) {
+        for (auto ref_op : ref_ops_) {
+            all_rank_ref_ops.push_back(ref_op);
+        }
+        for (int i = 1; i < ConfigManager::getInstance().slave_num_; ++i) {
+            int len;
+            MPI_Recv(&len, 1, MPI_INT, i, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            auto* recv_buffer = new long long[len * 5];
+            MPI_Recv(recv_buffer, len * 5, MPI_LONG_LONG, i,
+                     0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            for (int j = 0, k = 0; j < len; ++j) {
+                all_rank_ref_ops.push_back({recv_buffer[k], recv_buffer[k + 1],
+                                            recv_buffer[k + 2],
+                                            recv_buffer[k + 3],
+                                            recv_buffer[k + 4]});
+                k += 5;
+            }
+            delete[] recv_buffer;
+        }
+    } else {
+        int len = ref_ops_.size();
+        auto* send_buffer = new long long[len * 5];
+        for (int i = 0, j = 0; i < len; ++i) {
+            send_buffer[j++] = ref_ops_[i].ref_start_time;
+            send_buffer[j++] = ref_ops_[i].ref_end_time;
+            send_buffer[j++] = ref_ops_[i].latency;
+            send_buffer[j++] = ref_ops_[i].size;
+            send_buffer[j++] = ref_ops_[i].ty;
+        }
+        MPI_Send(&len, 1, MPI_INT, 0, 0, MPI_COMM_WORLD);
+        MPI_Send(send_buffer, len * 5, MPI_LONG_LONG, 0, 0,
+                 MPI_COMM_WORLD);
+        delete[] send_buffer;
+    }
+}
+
+YAML::Node PerfCounter::perfThisRank() {
+    return getPerfResult(ref_ops_);
+}
+
+YAML::Node PerfCounter::perfAllRank() {
+    return getPerfResult(all_rank_ref_ops);
+}
+
+void PerfCounter::calcQpsAndBw(std::vector<OperationRefInfo>& ops,
+                               QPS_perf& qps,
+                               BW_perf& bw) {
+    std::map<long long, std::pair<int, long long>> results;
     std::vector<int> qps_vec;
     std::vector<long long> bw_vec;
     for (auto& op : ops) {
-        int start_second = std::chrono::duration_cast<std::chrono::seconds>(
-            op.start_time.time_since_epoch()).count();
-        int end_second = std::chrono::duration_cast<std::chrono::seconds>(
-            op.end_time.time_since_epoch()).count();
+        long long start_second = op.ref_start_time;
+        long long end_second = op.ref_end_time;
         ++results[start_second].first;
         long long bandwidth_per_second =
             op.size / (end_second - start_second + 1);
-        for (int second = start_second; second <= end_second; ++second) {
+        for (long long second = start_second; second <= end_second; ++second) {
             results[second].second += bandwidth_per_second / 1024;
         }
     }

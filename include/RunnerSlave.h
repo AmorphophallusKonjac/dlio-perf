@@ -5,7 +5,7 @@
 #include <FileSystemFactory.h>
 #include <random>
 #include <CheckpointFactory.h>
-#include <yaml-cpp/yaml.h>
+#include <chrono>
 
 class RunnerSlave
 {
@@ -36,7 +36,8 @@ private:
     CheckpointFactory ck_factory_;
     std::mt19937 rand_engine_;
     std::vector<std::string> trainFileList_;
-    YAML::Node report;
+    std::chrono::steady_clock::time_point start_time_point_;
+    std::chrono::steady_clock::time_point end_time_point_;
 };
 
 

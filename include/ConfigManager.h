@@ -99,6 +99,8 @@ public:
 
     OutputConfig output;
 
+    int slave_id_;
+    int slave_num_;
 
     ConfigManager(const ConfigManager&) = delete;
     ConfigManager& operator=(const ConfigManager&) = delete;
@@ -108,6 +110,7 @@ public:
         static ConfigManager instance;
         return instance;
     }
+
 
     void fromYaml(const std::string& file);
 
