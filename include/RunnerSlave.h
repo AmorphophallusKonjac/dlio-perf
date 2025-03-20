@@ -1,6 +1,7 @@
 #ifndef RUNNERSLAVE_H
 #define RUNNERSLAVE_H
 
+#include <BatchTask.h>
 #include <string>
 #include <FileSystemFactory.h>
 #include <random>
@@ -38,6 +39,7 @@ private:
     std::vector<std::string> trainFileList_;
     std::chrono::steady_clock::time_point start_time_point_;
     std::chrono::steady_clock::time_point end_time_point_;
+    BatchTask* read_batch_task_ = nullptr;
 };
 
 

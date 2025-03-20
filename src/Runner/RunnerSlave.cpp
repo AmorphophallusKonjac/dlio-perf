@@ -31,6 +31,7 @@ void RunnerSlave::start() {
         run();
         end_time_point_ = std::chrono::steady_clock::now();
         MPI_Barrier(MPI_COMM_WORLD);
+        spdlog::info("Benchmark finish");
         finalize();
     } catch (const std::exception& e) {
         spdlog::error("rank {} fail. {}", slave_id_, e.what());
@@ -76,19 +77,19 @@ bool RunnerSlave::run() {
             const auto dataset_config = ConfigManager::getInstance().dataset;
             const auto checkpoint_config = ConfigManager::getInstance().
                 checkpoint;
-            // load checkpoint
             if (workflow_config.checkpoint)
                 loadCheckpoint();
-            // start batch
             for (int i = 0; i < epochs; ++i) {
-                spdlog::info("Rank {} start epoch {}", slave_id_, i);
-                readSamples();
+                read_batch_task_->mainTask();
+                spdlog::info("Rank {} read batch {}", slave_id_, i);
                 if (workflow_config.checkpoint && i && i % checkpoint_config.
                     checkpoint_interval == 0) {
                     saveCheckpoint();
                 }
             }
-            waitCheckpoint();
+            read_batch_task_->stopIOCtrlThread();
+            if (workflow_config.checkpoint)
+                waitCheckpoint();
             return true;
         } catch (const std::exception& e) {
             spdlog::error("Rank {} fail. {}", slave_id_, e.what());
@@ -250,6 +251,35 @@ void RunnerSlave::initialize() {
     MPI_Barrier(MPI_COMM_WORLD);
     getTrainFileList();
     rand_engine_.seed(getRandSeed());
+    if (ConfigManager::getInstance().workflow.train) {
+        const auto reader_config = ConfigManager::getInstance().reader;
+        const auto dataset_config = ConfigManager::getInstance().dataset;
+        const auto train_config = ConfigManager::getInstance().train;
+        const auto fs = fs_factory_.getFileSystem();
+        std::vector<std::string> batch_file_list;
+        while (batch_file_list.size() < train_config.epochs * reader_config.
+               batch_size) {
+            auto train_file_list = getShuffleFileList();
+            for (const auto& file : train_file_list) {
+                batch_file_list.push_back(file);
+            }
+        }
+        std::vector<IORequest> reader_requests;
+        for (long long i = 0; i < train_config.epochs * reader_config.
+                              batch_size;
+             ++i) {
+            reader_requests.emplace_back(IORequest::READ, batch_file_list[i],
+                                         dataset_config.sample_size, 0,
+                                         reader_config.transfer_size,
+                                         fs);
+        }
+        read_batch_task_ = new BatchTask(reader_config.batch_size,
+                                         0,
+                                         reader_config.read_threads,
+                                         reader_config.transfer_size,
+                                         "reader");
+        read_batch_task_->startIOCtrlThread(reader_requests);
+    }
     spdlog::info("Finish initialize");
 }
 
@@ -271,6 +301,7 @@ uint32_t RunnerSlave::getRandSeed() const {
 void RunnerSlave::finalize() {
     if (ConfigManager::getInstance().workflow.train == false)
         return;
+    delete read_batch_task_;
     PerfCounter::getInstance().setRefTimePoint(start_time_point_,
                                                end_time_point_);
     PerfCounter::getInstance().preprocess();

@@ -1,5 +1,7 @@
 #include "BatchTask.h"
 
+#include <spdlog/spdlog.h>
+
 #include <thread>
 #include <utility>
 #include <sys/prctl.h>
