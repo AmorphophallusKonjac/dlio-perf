@@ -165,7 +165,10 @@ std::vector<std::pair<double, T>> PerfCounter::getPercentiles(
         int index = static_cast<int>(std::ceil((percentile / 100) * vec.size()))
                     - 1;
         index = (index > 0) ? index : 0;
-        results.push_back({percentile, vec[index]});
+        if (index < vec.size())
+            results.push_back({percentile, vec[index]});
+        else
+            results.push_back({percentile, 0});
     }
     return results;
 }
