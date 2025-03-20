@@ -77,7 +77,8 @@ bool RunnerSlave::run() {
             const auto checkpoint_config = ConfigManager::getInstance().
                 checkpoint;
             // load checkpoint
-            loadCheckpoint();
+            if (workflow_config.checkpoint)
+                loadCheckpoint();
             // start batch
             for (int i = 0; i < epochs; ++i) {
                 spdlog::info("Rank {} start epoch {}", slave_id_, i);
