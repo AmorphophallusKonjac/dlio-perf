@@ -85,7 +85,7 @@ bool RunnerSlave::run() {
                 read_batch_task_->mainTask();
                 std::this_thread::sleep_until(
                     std::chrono::system_clock::now() +
-                    std::chrono::duration<double>(interval));
+                    std::chrono::milliseconds(interval));
                 if (workflow_config.checkpoint && i && i % checkpoint_config.
                     checkpoint_interval == 0) {
                     saveCheckpoint();

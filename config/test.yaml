@@ -19,7 +19,7 @@ reader:
   transfer_size: 524288
 train:
   steps: 10
-  interval: 0.1
+  interval: 100
 checkpoint:
   checkpoint_folder: ./checkpoints
   checkpoint_size: 409600

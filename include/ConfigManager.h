@@ -65,7 +65,7 @@ public:
     struct TrainConfig
     {
         int steps = 1;
-        double interval = 0;
+        int interval = 0;
     };
 
     TrainConfig train;

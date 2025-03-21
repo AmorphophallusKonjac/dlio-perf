@@ -117,7 +117,7 @@ void ConfigManager::fromYaml(const std::string& file) {
                 train.steps = node.as<int>();
             }
             if (const auto node = config["train"]["interval"]) {
-                train.interval = node.as<double>();
+                train.interval = node.as<int>();
             }
         }
 
