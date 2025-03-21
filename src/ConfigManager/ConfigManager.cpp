@@ -13,6 +13,7 @@ void ConfigManager::fromYaml(const std::string& file) {
     try {
         spdlog::info("Loading yaml file {}", file);
         YAML::Node config = YAML::LoadFile(file);
+        node_ = config;
 
         if (config["env"]) {
             if (const auto node = config["env"]["filesystem"]) {
@@ -112,8 +113,11 @@ void ConfigManager::fromYaml(const std::string& file) {
         }
 
         if (config["train"]) {
-            if (const auto node = config["train"]["epochs"]) {
-                train.epochs = node.as<int>();
+            if (const auto node = config["train"]["steps"]) {
+                train.steps = node.as<int>();
+            }
+            if (const auto node = config["train"]["interval"]) {
+                train.interval = node.as<double>();
             }
         }
 

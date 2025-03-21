@@ -1,7 +1,7 @@
 workflow:
   gen_data: false
   train: true
-  checkpoint: true
+  checkpoint: false
 dataset:
   sample_size: 524288
   sample_num: 24
@@ -18,7 +18,8 @@ reader:
   seed: rand
   transfer_size: 524288
 train:
-  epochs: 10
+  steps: 10
+  interval: 0.1
 checkpoint:
   checkpoint_folder: ./checkpoints
   checkpoint_size: 409600

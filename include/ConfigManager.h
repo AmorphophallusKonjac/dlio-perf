@@ -3,6 +3,7 @@
 
 #include <string>
 #include <vector>
+#include <yaml-cpp/yaml.h>
 
 class ConfigManager
 {
@@ -63,7 +64,8 @@ public:
 
     struct TrainConfig
     {
-        int epochs = 1;
+        int steps = 1;
+        double interval = 0;
     };
 
     TrainConfig train;
@@ -113,6 +115,8 @@ public:
 
 
     void fromYaml(const std::string& file);
+
+    YAML::Node node_;
 
 private:
     ConfigManager() = default;

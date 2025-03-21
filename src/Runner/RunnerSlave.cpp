@@ -71,7 +71,8 @@ std::vector<std::string> RunnerSlave::getShuffleFileList() {
 bool RunnerSlave::run() {
     if (ConfigManager::getInstance().workflow.train) {
         try {
-            const auto epochs = ConfigManager::getInstance().train.epochs;
+            const auto epochs = ConfigManager::getInstance().train.steps;
+            const auto interval = ConfigManager::getInstance().train.interval;
             const auto workflow_config = ConfigManager::getInstance().workflow;
             const auto reader_config = ConfigManager::getInstance().reader;
             const auto dataset_config = ConfigManager::getInstance().dataset;
@@ -80,8 +81,11 @@ bool RunnerSlave::run() {
             if (workflow_config.checkpoint)
                 loadCheckpoint();
             for (int i = 0; i < epochs; ++i) {
-                read_batch_task_->mainTask();
                 spdlog::info("Rank {} read batch {}", slave_id_, i);
+                read_batch_task_->mainTask();
+                std::this_thread::sleep_until(
+                    std::chrono::system_clock::now() +
+                    std::chrono::duration<double>(interval));
                 if (workflow_config.checkpoint && i && i % checkpoint_config.
                     checkpoint_interval == 0) {
                     saveCheckpoint();
@@ -257,7 +261,7 @@ void RunnerSlave::initialize() {
         const auto train_config = ConfigManager::getInstance().train;
         const auto fs = fs_factory_.getFileSystem();
         std::vector<std::string> batch_file_list;
-        while (batch_file_list.size() < train_config.epochs * reader_config.
+        while (batch_file_list.size() < train_config.steps * reader_config.
                batch_size) {
             auto train_file_list = getShuffleFileList();
             for (const auto& file : train_file_list) {
@@ -265,7 +269,7 @@ void RunnerSlave::initialize() {
             }
         }
         std::vector<IORequest> reader_requests;
-        for (long long i = 0; i < train_config.epochs * reader_config.
+        for (long long i = 0; i < train_config.steps * reader_config.
                               batch_size;
              ++i) {
             reader_requests.emplace_back(IORequest::READ, batch_file_list[i],
@@ -307,17 +311,21 @@ void RunnerSlave::finalize() {
     PerfCounter::getInstance().preprocess();
     std::filesystem::path output_folder(
         ConfigManager::getInstance().output.folder);
-    create_directory(output_folder);
+    create_directories(output_folder);
     auto this_rank_perf = PerfCounter::getInstance().perfThisRank();
     std::ofstream result(
         output_folder / ("rank_" + std::to_string(slave_id_) + "_result.yaml"));
     result << this_rank_perf;
     result.close();
 
-    if (slave_id_ == 0 && slave_num_ > 1) {
+    if (slave_id_ == 0) {
         auto all_rank_perf = PerfCounter::getInstance().perfAllRank();
         result.open(output_folder / "all_rank_result.yaml");
         result << all_rank_perf;
         result.close();
     }
+
+    result.open(output_folder / "config.yaml");
+    result << ConfigManager::getInstance().node_;
+    result.close();
 }
