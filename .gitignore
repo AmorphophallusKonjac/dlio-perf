@@ -6,3 +6,9 @@ cmake-build-debug
 bin
 third_party/_deps
 tests/_deps
+
+work_dir/*
+!work_dir/base_config/
+!work_dir/base_config/test.yaml
+!work_dir/test_config/
+!work_dir/test_config/test.yaml

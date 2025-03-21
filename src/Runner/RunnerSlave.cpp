@@ -81,7 +81,6 @@ bool RunnerSlave::run() {
             if (workflow_config.checkpoint)
                 loadCheckpoint();
             for (int i = 0; i < epochs; ++i) {
-                spdlog::info("Rank {} read batch {}", slave_id_, i);
                 read_batch_task_->mainTask();
                 std::this_thread::sleep_until(
                     std::chrono::system_clock::now() +

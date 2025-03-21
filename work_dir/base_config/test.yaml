@@ -1,0 +1,34 @@
+workflow:
+  gen_data: false
+  train: true
+  checkpoint: false
+dataset:
+  sample_size: 10240
+  sample_num: 33554432
+  data_folder: /mnt/cephfs-kernel/data
+  sample_sub_dir:
+    - 8
+    - 256
+    - 256
+  write_threads: 64
+reader:
+  batch_size: 1024
+  read_threads: 16
+  prefetch_size: 4
+  shuffle: global
+  seed: rand
+  transfer_size: 10240
+train:
+  steps: 10
+  interval: 100
+checkpoint:
+  checkpoint_folder: /mnt/cephfs-kernel/checkpoints
+  checkpoint_size: 53687091200 # 50GB
+  write_transfer_size: 104857600 # 100M
+  read_transfer_size: 104857600 # 100M
+  checkpoint_type: sync
+  checkpoint_interval: 20
+  checkpoint_layers: 5
+  read_threads: 16
+output:
+  folder: /home/wangmingyu/kwai

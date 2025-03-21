@@ -1,0 +1,15 @@
+base_config: /root/dlio-perf/work_dir/base_config/kwai.yaml
+output_folder: /root/dlio-perf/work_dir/test
+var:
+  name:
+    - train
+    - steps
+  start_val: 1
+  end_val: 3
+  step: 1
+servers:
+  - 10.118.0.161
+  - 10.118.0.162
+  - 10.118.0.163
+  - 10.118.0.164
+  - 10.118.0.165
