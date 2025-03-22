@@ -62,6 +62,15 @@ def drop_caches(hosts):
         subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", "sync"])
         subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", "echo 3 > /proc/sys/vm/drop_caches"])
 
+def check_var_path(config, path):
+    current = config
+    for key in path:
+        if key in current:
+            current = current[key]
+        else:
+            return False
+    return True
+
 def deal_with_yaml(args):
     file_path = args.config
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -74,6 +83,9 @@ def deal_with_yaml(args):
     hosts = servers + clients
     output_base = test_config["output_folder"]
     var_path = test_config["var"]["name"]
+    if not check_var_path(dlio_config, var_path):
+        print("var path error!")
+        return
     rank = args.rank
     total_rank = rank * len(clients)
     with open("hosts.txt", 'w') as f:
@@ -81,7 +93,7 @@ def deal_with_yaml(args):
             f.write(f"{client} slots={rank}\n")
     for i in tqdm(range(test_config["var"]["start_val"], test_config["var"]["end_val"], test_config["var"]["step"])):
         # prepare output_folder
-        sub_folder = "_".join(var_path)
+        sub_folder = f"rank_{rank}_" + "_".join(var_path)
         sub_folder = sub_folder + f"_{i}" 
         output_folder = os.path.join(output_base, sub_folder)
         os.makedirs(output_folder, exist_ok=True)
