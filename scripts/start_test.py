@@ -27,12 +27,15 @@ def start_remote_sar(host):
     return proc
 
 def stop_remote_sar(host):
-    kill_cmd = (
-        "pid=$(cat /tmp/sar_*.pid);"
-        "kill -9 $pid && rm /tmp/sar_*.pid || echo 'not running'"
-    )
+    kill_cmd = "cat /tmp/sar_*.pid | xargs kill"
     subprocess.Popen(
         ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", kill_cmd],
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL
+    )
+    rm_cmd = "rm /tmp/sar*"
+    subprocess.Popen(
+        ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", rm_cmd],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
@@ -71,6 +74,27 @@ def check_var_path(config, path):
             return False
     return True
 
+def clean_sar(hosts):
+    rm_log_cmd = "rm -f /var/log/sar*"
+    rm_pid_cmd = "rm -f /tmp/sar*"
+    kill_cmd = " ps -ef | grep sar | grep -v grep | awk '{print $2}' | xargs kill"
+    for host in hosts:
+        subprocess.Popen(
+            ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", rm_log_cmd],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        subprocess.Popen(
+            ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", rm_pid_cmd],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+        subprocess.Popen(
+            ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", kill_cmd],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL
+        )
+
 def deal_with_yaml(args):
     file_path = args.config
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -91,6 +115,8 @@ def deal_with_yaml(args):
     with open("hosts.txt", 'w') as f:
         for client in clients:
             f.write(f"{client} slots={rank}\n")
+    # before start clean sar
+    clean_sar(hosts)
     for i in tqdm(range(test_config["var"]["start_val"], test_config["var"]["end_val"], test_config["var"]["step"])):
         # prepare output_folder
         sub_folder = f"rank_{rank}_" + "_".join(var_path)
