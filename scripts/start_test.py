@@ -115,6 +115,23 @@ def deal_with_yaml(args):
     with open("hosts.txt", 'w') as f:
         for client in clients:
             f.write(f"{client} slots={rank}\n")
+    os.makedirs(output_base, exist_ok=True)
+    var_config_file = os.path.join(output_base, "var.yaml")
+    base_config_file = os.path.join(output_base, "base.yaml")
+    with open(var_config_file, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(
+                test_config, f,
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2
+            )
+    with open(base_config_file, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(
+                dlio_config, f,
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2
+            )
     # before start clean sar
     clean_sar(hosts)
     for i in tqdm(range(test_config["var"]["start_val"], test_config["var"]["end_val"], test_config["var"]["step"])):
