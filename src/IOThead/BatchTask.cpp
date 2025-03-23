@@ -4,20 +4,24 @@
 
 #include <thread>
 #include <utility>
-#include <sys/prctl.h>
 
 BatchTask::BatchTask(const long long batch_size, const int prefetch_size,
                      const int thread_num, const long long transfer_size,
                      std::string task_name) :
     batch_size_(batch_size), thread_num_(thread_num),
-    transfer_size_(transfer_size), request_queue_(thread_num * 2),
-    thread_finish_(1 - batch_size), batch_gen_(0), batch_use_(prefetch_size),
+    transfer_size_(transfer_size), batch_gen_(1 - thread_num_),
     task_name_(std::move(task_name)) {
+    for (int i = 0; i < thread_num_; ++i) {
+        thread_file_num_.push_back(0);
+        thread_sems_.emplace_back(std::make_unique<Semaphore>());
+        thread_io_requests_.emplace_back();
+    }
 }
 
 void BatchTask::mainTask() {
-    batch_use_.signal(1);
-    batch_gen_.wait(1);
+    for (int i = 0; i < thread_num_; ++i)
+        thread_sems_[i]->signal(1);
+    batch_gen_.wait(thread_num_);
     process();
 }
 
@@ -31,22 +35,16 @@ void BatchTask::stopIOCtrlThread() {
 }
 
 void BatchTask::ioCtrlThread(const std::vector<IORequest>& requests) {
-    const std::string thread_name_ = task_name_ + ".ioCtrlThread";
-    prctl(PR_SET_NAME, thread_name_);
+    for (int i = 0; i < batch_size_; ++i)
+        ++thread_file_num_[i % thread_num_];
+    for (int i = 0; i < requests.size(); ++i) {
+        thread_io_requests_[i % thread_num_].push_back(requests[i]);
+    }
     std::vector<std::thread> io_threads;
     io_threads.reserve(thread_num_);
     for (int i = 0; i < thread_num_; ++i) {
-        io_threads.emplace_back(&BatchTask::ioThread, this);
+        io_threads.emplace_back(&BatchTask::ioThread, this, i);
     }
-    for (long long i = 0; i < requests.size(); i = i + batch_size_) {
-        batch_use_.wait(1);
-        for (long long j = 0; j < batch_size_; ++j) {
-            request_queue_.Push(requests[i + j]);
-        }
-        thread_finish_.wait(batch_size_);
-        batch_gen_.signal(1);
-    }
-    request_queue_.Stop();
     for (auto& thread : io_threads) {
         if (thread.joinable())
             thread.join();
@@ -54,13 +52,14 @@ void BatchTask::ioCtrlThread(const std::vector<IORequest>& requests) {
 }
 
 
-void BatchTask::ioThread() {
-    const std::string thread_name_ = task_name_ + ".ioThread";
-    prctl(PR_SET_NAME, thread_name_);
-    for (auto request = request_queue_.Pop(); !request.empty();
-         request = request_queue_.Pop()) {
-        request.execute();
-        thread_finish_.signal(1);
+void BatchTask::ioThread(int idx) {
+    for (int i = 0; i < thread_io_requests_[idx].size();
+         i = i + thread_file_num_[idx]) {
+        thread_sems_[idx]->wait(1);
+        for (int j = 0; j < thread_file_num_[idx]; ++j) {
+            thread_io_requests_[idx][i + j].execute();
+        }
+        batch_gen_.signal(1);
     }
 }
 
