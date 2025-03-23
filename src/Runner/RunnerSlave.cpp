@@ -41,7 +41,8 @@ void RunnerSlave::start() {
 std::vector<std::string> RunnerSlave::getShuffleFileList() {
     auto shuffle_mode = ConfigManager::getInstance().reader.shuffle;
     auto slice_len = trainFileList_.size() / slave_num_;
-    slice_len -= slice_len % ConfigManager::getInstance().reader.batch_size;
+    if (slice_len > ConfigManager::getInstance().reader.batch_size)
+        slice_len -= slice_len % ConfigManager::getInstance().reader.batch_size;
     std::vector<std::string> shuffle_file_list;
     if (shuffle_mode == "none") {
         for (int i = 0, j = slave_id_; i < slice_len; ++i) {
