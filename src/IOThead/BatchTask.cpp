@@ -35,10 +35,13 @@ void BatchTask::stopIOCtrlThread() {
 }
 
 void BatchTask::ioCtrlThread(const std::vector<IORequest>& requests) {
+    auto steps = requests.size() / batch_size_;
     for (int i = 0; i < batch_size_; ++i)
         ++thread_file_num_[i % thread_num_];
-    for (int i = 0; i < requests.size(); ++i) {
-        thread_io_requests_[i % thread_num_].push_back(requests[i]);
+    for (int i = 0, j = 0; i < thread_num_; ++i) {
+        for (int k = 0; k < thread_file_num_[i] * steps; ++k) {
+            thread_io_requests_[i].push_back(requests[j++]);
+        }
     }
     std::vector<std::thread> io_threads;
     io_threads.reserve(thread_num_);
