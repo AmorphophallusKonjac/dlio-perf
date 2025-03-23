@@ -180,6 +180,24 @@ def deal_with_rank(args):
     clients = test_config["clients"]
     hosts = servers + clients
     output_base = test_config["output_folder"]
+    os.makedirs(output_base, exist_ok=True)
+    var_config_file = os.path.join(output_base, "var.yaml")
+    base_config_file = os.path.join(output_base, "base.yaml")
+    with open(var_config_file, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(
+                test_config, f,
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2
+            )
+    with open(base_config_file, 'w', encoding='utf-8') as f:
+            yaml.safe_dump(
+                dlio_config, f,
+                allow_unicode=True,
+                sort_keys=False,
+                indent=2
+            )
+    clean_sar(hosts)
     for i in tqdm(range(test_config["var"]["start_val"], test_config["var"]["end_val"], test_config["var"]["step"])):
         # calculate rank
         rank = i
@@ -206,12 +224,15 @@ def deal_with_rank(args):
         # drop cache
         drop_caches(hosts)
         # start sar
+        print("[info] start sar")
         start_sar(hosts)
         time.sleep(60)
         # start benchmark
+        print("[info] start benchmark")
         mpi_cmd=f"mpirun --allow-run-as-root -np {total_rank} --hostfile hosts.txt /root/dlio-perf/bin/dlio_perf --config run.yaml"
         subprocess.run(mpi_cmd, shell=True)
         # stop sar
+        print("[info] stop sar")
         stop_sar(hosts, output_folder)
     rm_cmd = "rm run.yaml"
     subprocess.run(rm_cmd, shell=True)
