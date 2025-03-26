@@ -64,6 +64,7 @@ void BatchTask::ioThread(int idx) {
         }
         batch_gen_.signal(1);
     }
+    batch_gen_.signal(1);
 }
 
 void BatchTask::process() {

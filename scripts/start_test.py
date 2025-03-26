@@ -7,17 +7,13 @@ from tqdm import tqdm
 from concurrent.futures import ThreadPoolExecutor
 
 ssh_user = "root"
-sar_cmd = "sar -o /var/log/sar_%HOST%_%TIMESTAMP%.log 1"
-
 
 
 def start_remote_sar(host):
-    timestamp = subprocess.check_output(["date", "+%s"]).decode().strip()
-    cmd = sar_cmd.replace("%HOST%", host).replace("%TIMESTAMP%", timestamp)
     ssh_args = [
         "ssh", "-o", "StrictHostKeyChecking=no", 
         f"{ssh_user}@{host}",
-        f"nohup {cmd} >/dev/null 2>&1 & echo $! > /tmp/sar_{timestamp}.pid"
+        f"/home/wangmingyu/stat_tools/run_stat.sh &"
     ]
     proc = subprocess.Popen(
         ssh_args,
@@ -27,28 +23,20 @@ def start_remote_sar(host):
     return proc
 
 def stop_remote_sar(host):
-    kill_cmd = "cat /tmp/sar_*.pid | xargs kill"
+    kill_cmd = "/home/wangmingyu/stat_tools/stop_stat.sh"
     subprocess.Popen(
         ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", kill_cmd],
         stdout=subprocess.DEVNULL,
         stderr=subprocess.DEVNULL
     )
-    rm_cmd = "rm /tmp/sar*"
-    subprocess.Popen(
-        ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", rm_cmd],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
 
 def copy_sar_log(host, folder):
-    scp_cmd = f"scp -o StrictHostKeyChecking=no {ssh_user}@{host}:/var/log/sar* {folder}"
+    scp_cmd = f"scp -o StrictHostKeyChecking=no {ssh_user}@{host}:/home/wangmingyu/stat_tools/cpu {folder}/{host}_cpu"
     subprocess.run(scp_cmd, shell=True)
-    rm_cmd = "rm -f /var/log/sar*"
-    subprocess.Popen(
-        ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", rm_cmd],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL
-    )
+    scp_cmd = f"scp -o StrictHostKeyChecking=no {ssh_user}@{host}:/home/wangmingyu/stat_tools/disk {folder}/{host}_disk"
+    subprocess.run(scp_cmd, shell=True)
+    scp_cmd = f"scp -o StrictHostKeyChecking=no {ssh_user}@{host}:/home/wangmingyu/stat_tools/network {folder}/{host}_network"
+    subprocess.run(scp_cmd, shell=True)
 
 def start_sar(hosts):
     with ThreadPoolExecutor(max_workers=3) as executor:
@@ -62,7 +50,7 @@ def stop_sar(hosts, folder):
 
 def drop_caches(hosts):
     for host in hosts:
-        subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", "sync"])
+        # subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", "sync"])
         subprocess.run(["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", "echo 3 > /proc/sys/vm/drop_caches"])
 
 def check_var_path(config, path):
@@ -74,27 +62,6 @@ def check_var_path(config, path):
             return False
     return True
 
-def clean_sar(hosts):
-    rm_log_cmd = "rm -f /var/log/sar*"
-    rm_pid_cmd = "rm -f /tmp/sar*"
-    kill_cmd = " ps -ef | grep sar | grep -v grep | awk '{print $2}' | xargs kill"
-    for host in hosts:
-        subprocess.Popen(
-            ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", rm_log_cmd],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        subprocess.Popen(
-            ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", rm_pid_cmd],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-        subprocess.Popen(
-            ["ssh", "-o", "StrictHostKeyChecking=no", f"{ssh_user}@{host}", kill_cmd],
-            stdout=subprocess.DEVNULL,
-            stderr=subprocess.DEVNULL
-        )
-
 def deal_with_yaml(args):
     file_path = args.config
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -104,7 +71,7 @@ def deal_with_yaml(args):
         dlio_config = yaml.safe_load(f)
     servers = test_config["servers"]
     clients = test_config["clients"]
-    hosts = servers + clients
+    hosts = servers
     output_base = test_config["output_folder"]
     var_path = test_config["var"]["name"]
     if not check_var_path(dlio_config, var_path):
@@ -132,8 +99,6 @@ def deal_with_yaml(args):
                 sort_keys=False,
                 indent=2
             )
-    # before start clean sar
-    clean_sar(hosts)
     for i in tqdm(range(test_config["var"]["start_val"], test_config["var"]["end_val"], test_config["var"]["step"])):
         # prepare output_folder
         sub_folder = f"rank_{rank}_" + "_".join(var_path)
@@ -155,11 +120,15 @@ def deal_with_yaml(args):
                 indent=2
             )
         # drop cache
+        print("drop cache")
         drop_caches(hosts)
+        drop_caches(clients)
+        print("start sar")
         # start sar
         start_sar(hosts)
         time.sleep(60)
         # start benchmark
+        print("start benchmark")
         mpi_cmd=f"mpirun --allow-run-as-root -np {total_rank} --hostfile hosts.txt /root/dlio-perf/bin/dlio_perf --config run.yaml"
         subprocess.run(mpi_cmd, shell=True)
         # stop sar
@@ -178,7 +147,7 @@ def deal_with_rank(args):
         dlio_config = yaml.safe_load(f)
     servers = test_config["servers"]
     clients = test_config["clients"]
-    hosts = servers + clients
+    hosts = servers
     output_base = test_config["output_folder"]
     os.makedirs(output_base, exist_ok=True)
     var_config_file = os.path.join(output_base, "var.yaml")
@@ -197,7 +166,6 @@ def deal_with_rank(args):
                 sort_keys=False,
                 indent=2
             )
-    clean_sar(hosts)
     for i in tqdm(range(test_config["var"]["start_val"], test_config["var"]["end_val"], test_config["var"]["step"])):
         # calculate rank
         rank = i
@@ -223,6 +191,7 @@ def deal_with_rank(args):
             )
         # drop cache
         drop_caches(hosts)
+        drop_caches(clients)
         # start sar
         print("[info] start sar")
         start_sar(hosts)

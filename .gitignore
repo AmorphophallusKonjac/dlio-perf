@@ -12,4 +12,4 @@ work_dir/base_config/*
 !work_dir/base_config/test.yaml
 work_dir/test_config/*
 !work_dir/test_config/test.yaml
-test_archive
+test_archive*
