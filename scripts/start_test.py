@@ -133,6 +133,7 @@ def deal_with_yaml(args):
         subprocess.run(mpi_cmd, shell=True)
         # stop sar
         stop_sar(hosts, output_folder)
+        time.sleep(60)
     rm_cmd = "rm run.yaml"
     subprocess.run(rm_cmd, shell=True)
     rm_cmd = "rm hosts.txt"
@@ -203,6 +204,7 @@ def deal_with_rank(args):
         # stop sar
         print("[info] stop sar")
         stop_sar(hosts, output_folder)
+        time.sleep(60)
     rm_cmd = "rm run.yaml"
     subprocess.run(rm_cmd, shell=True)
     rm_cmd = "rm hosts.txt"
