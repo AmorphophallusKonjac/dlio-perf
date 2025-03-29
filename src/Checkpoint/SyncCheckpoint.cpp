@@ -13,7 +13,7 @@ void SyncCheckpoint::load() {
                        "checkpoint_" + std::to_string(slave_id_) + "_" +
                        std::to_string(counter_));
     if (counter_ == 0) {
-        ck_path = fs::path(ck_config.checkpoint_folder) / "checkpoint_base";
+        ck_path = fs::path(ck_config.checkpoint_folder) / "base";
     }
     const auto size = ck_config.checkpoint_size;
     const auto layers = ck_config.checkpoint_layers;
@@ -80,7 +80,7 @@ void SyncCheckpoint::generate() {
     const auto ck_config = ConfigManager::getInstance().checkpoint;
     fs_->createDir(ck_config.checkpoint_folder);
     const auto ck_path = fs::path(ck_config.checkpoint_folder) /
-                         "checkpoint_base";
+                         "base";
     const auto ck_file = fs_->getFileDescriptor();
     ck_file->open(ck_path, File::WRITE);
     ck_file->writeWholeFile(ck_config.checkpoint_size,

@@ -62,6 +62,10 @@ def check_var_path(config, path):
             return False
     return True
 
+def rm_ck(folder):
+    rm_cmd = f"rm -f {folder}/checkpoint*"
+    subprocess.run(rm_cmd, shell=True)
+
 def deal_with_yaml(args):
     file_path = args.config
     with open(file_path, 'r', encoding='utf-8') as f:
@@ -133,6 +137,7 @@ def deal_with_yaml(args):
         subprocess.run(mpi_cmd, shell=True)
         # stop sar
         stop_sar(hosts, output_folder)
+        rm_ck(dlio_config["checkpoint"]["checkpoint_folder"])
         time.sleep(60)
     rm_cmd = "rm run.yaml"
     subprocess.run(rm_cmd, shell=True)
@@ -204,6 +209,7 @@ def deal_with_rank(args):
         # stop sar
         print("[info] stop sar")
         stop_sar(hosts, output_folder)
+        rm_ck(dlio_config["checkpoint"]["checkpoint_folder"])
         time.sleep(60)
     rm_cmd = "rm run.yaml"
     subprocess.run(rm_cmd, shell=True)
