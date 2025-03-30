@@ -16,24 +16,17 @@ void SyncCheckpoint::load() {
         ck_path = fs::path(ck_config.checkpoint_folder) / "base";
     }
     const auto size = ck_config.checkpoint_size;
-    const auto layers = ck_config.checkpoint_layers;
     long long pos = 0;
     std::vector<IORequest> requests;
     for (int i = 0; i < ck_config.read_threads; ++i) {
         requests.emplace_back(IORequest::READ, ck_path,
                               ck_config.read_transfer_size, fs_);
-        auto layers_per_thread = layers / ck_config.read_transfer_size;
+        auto per_thread_size = size / ck_config.read_threads;
         if (i == ck_config.read_threads - 1) {
-            layers_per_thread += layers % ck_config.read_transfer_size;
+            per_thread_size += size % ck_config.read_threads;
         }
-        for (int j = 0; j < layers_per_thread; ++j) {
-            auto layer_size = size / layers;
-            if (i == ck_config.read_threads - 1 && j == layers_per_thread - 1) {
-                layer_size += size % layers;
-            }
-            requests[i].addIOReq(pos, layer_size);
-            pos += layer_size;
-        }
+        requests[i].addIOReq(pos, per_thread_size);
+        pos += per_thread_size;
     }
     std::vector<std::thread> read_threads;
     read_threads.reserve(ck_config.read_threads);
