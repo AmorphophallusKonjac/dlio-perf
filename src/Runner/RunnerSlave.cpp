@@ -90,6 +90,10 @@ bool RunnerSlave::run() {
                     checkpoint_interval == 0) {
                     saveCheckpoint();
                 }
+                if (workflow_config.checkpoint && i && i % checkpoint_config.
+                    recovery_interval == 0) {
+                    loadCheckpoint();
+                }
             }
             read_batch_task_->stopIOCtrlThread();
             if (workflow_config.checkpoint)

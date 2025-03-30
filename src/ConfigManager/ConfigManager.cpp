@@ -128,6 +128,9 @@ void ConfigManager::fromYaml(const std::string& file) {
             if (const auto node = config["checkpoint"]["checkpoint_interval"]) {
                 checkpoint.checkpoint_interval = node.as<int>();
             }
+            if (const auto node = config["checkpoint"]["recovery_interval"]) {
+                checkpoint.recovery_interval = node.as<int>();
+            }
             if (const auto node = config["checkpoint"]["checkpoint_size"]) {
                 checkpoint.checkpoint_size = node.as<long long>();
             }

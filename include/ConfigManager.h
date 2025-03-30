@@ -81,6 +81,7 @@ public:
 
         std::string checkpoint_folder = "./checkpoints";
         int checkpoint_interval = 1;
+        int recovery_interval = 1;
         long long checkpoint_size = 262144;
         int read_threads = 1;
         int write_threads = 1;
