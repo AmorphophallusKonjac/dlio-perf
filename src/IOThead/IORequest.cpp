@@ -45,10 +45,10 @@ void IORequest::execute() const {
         default:
             break;
     }
+    const auto buffer = new char[transfer_size];
     for (size_t i = 0; i < pos_.size(); ++i) {
         auto pos = pos_[i];
         auto size = size_[i];
-        const auto buffer = new char[size];
         switch (ty) {
             case READ:
                 for (long long i = 0; i < size; i = i + transfer_size) {
@@ -78,8 +78,8 @@ void IORequest::execute() const {
                 fs->createDir(path);
                 break;
         }
-        delete[] buffer;
     }
+    delete[] buffer;
     switch (ty) {
         case READ:
         case WRITE:
